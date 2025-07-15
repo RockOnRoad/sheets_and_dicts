@@ -10,8 +10,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from dotenv import load_dotenv
 
-from app.admin import a_rtr
-from app.handlers import h_rtr
+from app.routers import router as main_router
 
 load_dotenv()
 
@@ -23,7 +22,7 @@ dp = Dispatcher()
 
 
 async def main():
-    dp.include_routers(h_rtr, a_rtr)
+    dp.include_router(main_router)
     await dp.start_polling(bot)
 
 

@@ -3,14 +3,14 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 
 
-h_rtr = Router()
+rtr = Router(name=__name__)
 
 
-@h_rtr.message(CommandStart())
+@rtr.message(CommandStart())
 async def start(message: Message):
     await message.answer(f"Salom, {message.from_user.full_name}!")
 
 
-@h_rtr.message(Command("help"))
+@rtr.message(Command("help"))
 async def help(message: Message):
     await message.answer("Информация о боте")
