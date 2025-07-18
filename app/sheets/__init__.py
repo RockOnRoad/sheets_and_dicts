@@ -1,9 +1,8 @@
 import os
-from dotenv import load_dotenv
-
 import gspread
 from gspread import Worksheet
 from google.oauth2.service_account import Credentials
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -18,7 +17,10 @@ async def sheets_conn(which_sheet: str = None) -> Worksheet | None:
     )
     client = gspread.authorize(creds)
 
-    sheet_id: str = (os.getenv("SHEET_ID"),)
-    sheet: Worksheet = client.open_by_key(sheet_id).worksheet(which_sheet)
+    sheet_id: str = os.getenv("SHEET_ID")
 
-    return sheet
+    try:
+        sheet: Worksheet = client.open_by_key(sheet_id).worksheet(which_sheet)
+        return sheet
+    except gspread.exceptions.WorksheetNotFound:
+        return None
