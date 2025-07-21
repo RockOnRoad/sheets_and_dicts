@@ -1,24 +1,18 @@
-async def order_by(tires, parameter, key):
-    ordered_by_key: dict = {}
+from aiogram.types import Message
+from gspread import Worksheet
 
-    for value in parameter:
-        ordered_by_key[value] = []
-        for tire in tires:
-            if tire.get(key, "").replace(" ", "_") == value:
-                ordered_by_key[value].append(tires.pop(tires.index(tire)))
-
-    # for item in ordered_by_key:
-    #     print(item, ordered_by_key[item][:4])
-
-    return ordered_by_key
+from app.sheets.add_rows import append_rows
 
 
 async def remove_unnecessary_keys(tires):
-    keys_to_remove = [
+    keys_to_remove = (
         "price_kryarsk2_rozn",
         "price_oh_krnekr",
         "price_oh_krnekr_rozn",
         "rest_oh_krnekr",
+        "price_oh_bilkal",
+        "price_oh_bilkal_rozn",
+        "rest_oh_bilkal",
         "price_ok_katsev",
         "price_ok_katsev_rozn",
         "rest_ok_katsev",
@@ -35,6 +29,10 @@ async def remove_unnecessary_keys(tires):
         "protection",
         "usa",
         "omolog",
+        "side",
+        "axle",
+        "sloy",
+        "grip",
         "img_small",
         "img_big_pish",
         "protector_type",
@@ -44,57 +42,35 @@ async def remove_unnecessary_keys(tires):
         "num_layers_treadmil",
         "tread_width",
         "initial_tread_depth",
-    ]
-    for tire in tires:
+    )
+    for line in tires:
         for key in keys_to_remove:
-            tire.pop(key, None)
+            # line.pop(key, None)
+            if key in line:
+                del line[key]
     return tires
 
 
-async def seasons_list(tires) -> list:
-    seasons = set(
-        i.get("season", "") for i in tires if isinstance(i.get("season"), str)
-    )
-    return list(seasons)
+async def order_and_upload(
+    parameter: str, data: list, sheet: Worksheet, message: Message
+) -> dict:
 
+    stock_by_param: dict = {}
+    for i in data:
+        key = i.get(parameter, "-")
+        stock_by_param.setdefault(key, []).append(i)
+    #  {'Yokohama': [{'cae': 'R0229', 'name': ...}, {}, {}], 'Pirelli_Formula': [{'cae': '2177000', {}, {}], ...}
 
-async def brands_list(tires) -> list:
-    brands = set(
-        i.get("brand", "").replace(" ", "_")
-        for i in tires
-        if isinstance(i.get("brand"), str)
-    )
-    return list(brands)
+    if parameter == "season":
+        #  stock_by_param ->
+        #  {'Зимняя': [{'cae': 'F7640', 'name': ...}, {}, {}], 'Летняя': [{'cae': '2177000', {}, {}], ...}
 
+        await message.answer(
+            f"""✅ Позиции рассортированы по сезону.
+{'\n'.join([f'{key} ({len(value)} строк)' for key, value in stock_by_param.items()])}"""
+        )
 
-async def arange_by_brand(json) -> dict:
-    tires = json["tires"]
+        snow_and_ice: list = stock_by_param["Зимняя"] + stock_by_param["Всесезонная"]
+        #  [{'cae': 'F7640', 'name': ...}, {}, {}, {'cae': '2177000'}, {}, {}, ...]
 
-    brands: list = await brands_list(tires)
-    # ["Yokohama", "Ikon Tyres", "Pirelli", ...]
-    in_stock_tires: list = [tire for tire in tires if "price_kryarsk2" in tire]
-    # [{'cae': 'F7640', 'gtin': 02900077764912, 'name': '...'}, {'cae': 'F7641', 'a': 3, 'b': 4}, ...]
-    no_unnecessary_keys: list = await remove_unnecessary_keys(tires=in_stock_tires)
-    # [{'cae': 'F7640', 'name': '***', ...}, {'cae': 'F7641', ...}, ...]
-    stock_by_brand: dict = await order_by(
-        tires=no_unnecessary_keys, parameter=brands, key="brand"
-    )
-    # {'Yokohama': [{'cae': 'R0229', 'name': ...}, {}, {}], 'Pirelli_Formula': [{'cae': '2177000', {}, {}], ...}
-
-    return stock_by_brand
-
-
-async def arange_by_season(json) -> dict:
-    tires = json["tires"]
-
-    seasons: list = await seasons_list(tires)  # ???
-    in_stock_tires: list = [tire for tire in tires if "price_kryarsk2" in tire]
-    # [{'cae': 'F7640', 'gtin': 02900077764912, 'name': '...'}, {'cae': 'F7641', 'a': 3, 'b': 4}, ...]
-    no_unnecessary_keys: list = await remove_unnecessary_keys(tires=in_stock_tires)
-    # [{'cae': 'F7640', 'name': '***', ...}, {'cae': 'F7641', ...}, ...]
-    stock_by_season: dict = await order_by(
-        tires=no_unnecessary_keys, parameter=seasons, key="season"
-    )
-    # ???
-
-    return stock_by_season
+        await append_rows(sheet=sheet, stock=snow_and_ice, message=message)

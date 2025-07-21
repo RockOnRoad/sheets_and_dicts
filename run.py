@@ -1,9 +1,8 @@
-import asyncio
-
-# import sys
+import logging
 import os
+import sys
 
-# import logging
+import asyncio
 
 from aiogram import Bot, Dispatcher
 
@@ -17,20 +16,19 @@ from app.routers import router as main_router
 load_dotenv()
 
 
-bot = Bot(
-    token=os.getenv("TOKEN"),
-    default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-)
-dp = Dispatcher()
-
-
 async def main():
+    dp = Dispatcher()
     dp.include_router(main_router)
+    bot = Bot(
+        token=os.getenv("TOKEN"),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

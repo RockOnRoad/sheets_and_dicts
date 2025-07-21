@@ -2,9 +2,11 @@ import json
 from io import BytesIO
 from aiogram import F, Router
 from aiogram.types import Message, CallbackQuery
+from gspread import Worksheet
 
-from app.dicts.convert import arange_by_brand, arange_by_season
-from app.sheets.edit_sheets import populate_sheet
+from app.dicts.convert import order_and_upload, remove_unnecessary_keys
+from app.sheets.add_amounts import update_amounts
+from app.sheets import sheets_conn
 
 
 rtr = Router()
@@ -12,6 +14,9 @@ rtr = Router()
 
 @rtr.message(F.document)
 async def handle_json_file(message: Message):
+    sheet: str = "test"
+    ws: Worksheet = await sheets_conn(sheet)
+
     if not message.document.file_name.endswith(".json"):
         await message.reply("Только .json файлы поддерживаются.")
         return
@@ -23,25 +28,32 @@ async def handle_json_file(message: Message):
     try:
         data = json.load(file_obj)
     except Exception as e:
-        await message.reply(f"Invalid JSON: {e}")
+        file_obj.close()
+        await message.reply(f"Ошибка при обработке файла: {str(e)}")
         return
+    else:
+        await message.answer(
+            f"Файл <b>{message.document.file_name}</b> успешно загружен."
+        )
+        file_obj.close()
 
-    # stock_ordered_by_brand: dict = await arange_by_brand(data)
-    # {'Yokohama': [{'cae': 'R0229', 'name': ...}, {}, {}], 'Pirelli_Formula': [{'cae': '2177000', {}, {}], ...}
-
-    stock_ordered_by_season: dict = await arange_by_season(data)
-    # {'Зимняя': [{'cae': 'F7640', 'name': ...}, {}, {}], 'Летняя': [{'cae': '2177000', {}, {}], ...}
-
-    snow_and_ice_stock: list = (
-        stock_ordered_by_season["Зимняя"] + stock_ordered_by_season["Всесезонная"]
+    only_tires: list = data["tires"]
+    await message.answer(
+        f"✅ Файл прочитан.\nКоличество позиций шин: <b>{len(only_tires)}</b>"
     )
 
-    await populate_sheet(sheet="snow_and_ice_4tochki", stock=snow_and_ice_stock)
-    # await populate_sheet(
-    #     sheet="summer_4tochki", stock=stock_ordered_by_season["Летняя"]
-    # )
-
-    await message.reply(
-        f"""Parsed JSON with keys: 
-{', '.join([f'{key} ({len(value)})' for key, value in stock_ordered_by_season.items()])}"""
+    only_kryarsk2: list = [line for line in only_tires if "price_kryarsk2" in line]
+    #  [{'cae': 'F7640', 'gtin': 02900077764912, 'name': '...'}, {'cae': 'F7641', 'a': 3, 'b': 4}, ...]
+    await message.answer(
+        f"✅ Количество позиций шин в наличии на складе Красноярск2: <b>{len(only_kryarsk2)}</b>"
     )
+
+    clean_dicts: list = await remove_unnecessary_keys(only_kryarsk2)
+    #  [{'cae': 'F7640', 'name': '...'}, {'cae': 'F7641', ...}, ...]
+
+    await order_and_upload(
+        parameter="season", data=clean_dicts, sheet=ws, message=message
+    )
+    await message.answer("✅ Новые позиции добавлены в конец таблицы.")
+
+    await update_amounts(sheet=ws, stock=clean_dicts, message=message)
