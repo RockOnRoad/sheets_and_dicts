@@ -1,10 +1,9 @@
-from aiogram.types import Message
 from gspread import Worksheet
-
-from app.sheets.add_rows import append_rows
 
 
 async def remove_unnecessary_keys(tires):
+    """Облегчает полученный из json файла словарь, удаляя из него не нужные ключи."""
+
     keys_to_remove = (
         "price_kryarsk2_rozn",
         "price_oh_krnekr",
@@ -51,26 +50,14 @@ async def remove_unnecessary_keys(tires):
     return tires
 
 
-async def order_and_upload(
-    parameter: str, data: list, sheet: Worksheet, message: Message
-) -> dict:
+async def divide_by_key(data: list, param: str) -> dict:
+    """Проходит по списку словарей, находит уникальные значения ключа {param}\n
+    и составляет словарь с ключами из этих уникальных значений.\n
+    После добавляет каждый словарь из начального списка в список, ключом которого является значение его параметра.
+    """
 
     stock_by_param: dict = {}
     for i in data:
-        key = i.get(parameter, "-")
+        key = i.get(param, "-")
         stock_by_param.setdefault(key, []).append(i)
-    #  {'Yokohama': [{'cae': 'R0229', 'name': ...}, {}, {}], 'Pirelli_Formula': [{'cae': '2177000', {}, {}], ...}
-
-    if parameter == "season":
-        #  stock_by_param ->
-        #  {'Зимняя': [{'cae': 'F7640', 'name': ...}, {}, {}], 'Летняя': [{'cae': '2177000', {}, {}], ...}
-
-        await message.answer(
-            f"""✅ Позиции рассортированы по сезону.
-{'\n'.join([f'{key} ({len(value)} строк)' for key, value in stock_by_param.items()])}"""
-        )
-
-        snow_and_ice: list = stock_by_param["Зимняя"] + stock_by_param["Всесезонная"]
-        #  [{'cae': 'F7640', 'name': ...}, {}, {}, {'cae': '2177000'}, {}, {}, ...]
-
-        await append_rows(sheet=sheet, stock=snow_and_ice, message=message)
+    return stock_by_param

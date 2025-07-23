@@ -7,15 +7,20 @@ from gspread import Worksheet
 
 async def insert_updated_amounts(sheet: Worksheet, amounts: list) -> None:
 
-    r = float(random.randint(0, 30))
-    g = float(random.randint(0, 30))
-    b = float(random.randint(0, 30))
+    r: int = float(random.randint(0, 30))
+    g: int = float(random.randint(0, 30))
+    b: int = float(random.randint(0, 30))
 
     today = datetime.today().strftime("%d.%m")
-    sheet.insert_cols([[f"Наличие {today}"], [f"Стоимость {today}"]], col=18)
+    sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=18)
     sheet.update(amounts, "R3")
     sheet.format("R3:S", {"backgroundColor": {"red": r, "green": g, "blue": b}})
     sheet.update_cell(2, 16, '=ArrayFormula(IF(ISNUMBER(S2:S),S2:S*4,""))')
+    sheet.update(
+        values=[[f"Стоимость x4 ({today})", f"Цена x4 ({today})"]],
+        range_name="P1:Q1",
+        value_input_option="USER_ENTERED",
+    )
 
 
 async def update_amounts(sheet: Worksheet, stock: list, message: Message) -> None:
@@ -43,6 +48,7 @@ async def update_amounts(sheet: Worksheet, stock: list, message: Message) -> Non
         else:
             amounts.append([0, 0])
     #  amounts -> [[1, 53000], [14, 57000], [4, 7700], [20, 3250], ...]
-    await message.answer(f"✅ Остатки обновлены. <b>{len(amounts)}</b> строк.")
     await insert_updated_amounts(sheet=sheet, amounts=amounts)
-    await message.answer("✅ Остатки и цены добавлены в таблицу.")
+    await message.answer(
+        f"✅ Остатки и цены добавлены в таблицу. <b>{len(amounts)}</b> строк."
+    )

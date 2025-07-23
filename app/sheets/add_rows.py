@@ -7,7 +7,6 @@ from gspread import Worksheet
 async def upload_stock_to_sheet(sheet: Worksheet, data: dict) -> None:
     if any(data.values()):
         sheet.add_rows(len(data["hidden"]) + 1)
-        # print(len(data["hidden"]))
 
         last_row: int = len(sheet.get("A3:A")) + 4
 
@@ -17,8 +16,6 @@ async def upload_stock_to_sheet(sheet: Worksheet, data: dict) -> None:
                 {"range": f"H{last_row}", "values": data["visible"]},
             ],
         )
-
-    #  Проверить что все caes внесены
 
 
 async def prepare_table_data(data: list):
@@ -69,6 +66,8 @@ async def sort_stock(data):
 
 
 async def append_rows(sheet: Worksheet, stock: list, message: Message) -> None:
+    """Вносит новые позиции в таблицу.\n"""
+
     #  stock -> [{'cae': 'F7640', 'name': 'P215/65R17 98T ...', 'season': 'Зимняя', ...}, {}, {}]
 
     ex_caes: list = [item[0] if item else "" for item in sheet.get("A3:A")]
@@ -86,10 +85,3 @@ async def append_rows(sheet: Worksheet, stock: list, message: Message) -> None:
         await message.answer("✅ Данные подготовлены для добавления в таблицу.")
 
         await upload_stock_to_sheet(sheet=sheet, data=table_data)
-
-    # amounts = await fresh_amounts(sheet=stock_sheet, stock=stock)
-    # await insert_updated_amounts(sheet=stock_sheet, stock=amounts)
-
-    # for line in sorted_fresh_stock:
-    #     print(f"{line['cae']}, {line['brand']}, {line['name']}")
-    # print(len(sorted_fresh_stock))
