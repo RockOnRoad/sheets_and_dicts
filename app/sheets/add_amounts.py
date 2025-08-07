@@ -12,15 +12,26 @@ async def insert_updated_amounts(sheet: Worksheet, amounts: list) -> None:
     b: int = float(random.randint(0, 30))
 
     today = datetime.today().strftime("%d.%m")
-    sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=18)
-    sheet.update(amounts, "R3")
-    sheet.format("R3:S", {"backgroundColor": {"red": r, "green": g, "blue": b}})
-    sheet.update_cell(2, 16, '=ArrayFormula(IF(ISNUMBER(S2:S),S2:S*4,""))')
+    sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=21)
+    sheet.update(amounts, "U3")
+    sheet.format("U3:V", {"backgroundColor": {"red": r, "green": g, "blue": b}})
+    sheet.update_cell(2, 18, '=ArrayFormula(IF(ISNUMBER(V2:V),V2:V*4,""))')
     sheet.update(
-        values=[[f"Стоимость x4 ({today})", f"Цена x4 ({today})"]],
-        range_name="P1:Q1",
+        values=[[f"Стоимость\nx4 ({today})", f"Цена x4\n({today})"]],
+        range_name="R1:S1",
         value_input_option="USER_ENTERED",
     )
+    sheet.update(
+        values=[
+            [
+                "=ARRAYFORMULA($U$2:$U)",
+                '=ARRAYFORMULA(IF($U$2:$U>0,$V$2:$V-$X$2:$X,""))',
+            ]
+        ],
+        range_name="G2:H2",
+        value_input_option="USER_ENTERED",
+    )
+    sheet.update_cell(2, 20, "=ARRAYFORMULA($U$2:$U-$W$2:$W)")
 
 
 async def update_amounts(sheet: Worksheet, stock: list, message: Message) -> None:

@@ -13,7 +13,7 @@ async def upload_stock_to_sheet(sheet: Worksheet, data: dict) -> None:
         sheet.batch_update(
             data=[
                 {"range": f"A{last_row}", "values": data["hidden"]},
-                {"range": f"H{last_row}", "values": data["visible"]},
+                {"range": f"J{last_row}", "values": data["visible"]},
             ],
         )
 
