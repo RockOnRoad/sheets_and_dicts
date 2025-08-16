@@ -7,31 +7,31 @@ from gspread import Worksheet
 
 async def insert_updated_amounts(sheet: Worksheet, amounts: list) -> None:
 
-    r: int = float(random.randint(0, 30))
-    g: int = float(random.randint(0, 30))
-    b: int = float(random.randint(0, 30))
+    r: int = float(random.randint(0, 40))
+    g: int = float(random.randint(0, 20))
+    b: int = float(random.randint(0, 40))
 
     today = datetime.today().strftime("%d.%m")
-    sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=21)
-    sheet.update(amounts, "U3")
-    sheet.format("U3:V", {"backgroundColor": {"red": r, "green": g, "blue": b}})
-    sheet.update_cell(2, 18, '=ArrayFormula(IF(ISNUMBER(V2:V),V2:V*4,""))')
+    sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=22)
+    sheet.update(amounts, "V3")
+    sheet.format("V3:W", {"backgroundColor": {"red": r, "green": g, "blue": b}})
+    sheet.update_cell(2, 19, '=ArrayFormula(IF(ISNUMBER(W2:W),W2:W*4,""))')
     sheet.update(
         values=[[f"Стоимость\nx4 ({today})", f"Цена x4\n({today})"]],
-        range_name="R1:S1",
+        range_name="S1:T1",
         value_input_option="USER_ENTERED",
     )
     sheet.update(
         values=[
             [
-                "=ARRAYFORMULA($U$2:$U)",
-                '=ARRAYFORMULA(IF($U$2:$U>0,$V$2:$V-$X$2:$X,""))',
+                "=ARRAYFORMULA($V$2:$V)",
+                '=ARRAYFORMULA(IF($V$2:$V>0,$W$2:$W-$Y$2:$Y,""))',
             ]
         ],
         range_name="G2:H2",
         value_input_option="USER_ENTERED",
     )
-    sheet.update_cell(2, 20, "=ARRAYFORMULA($U$2:$U-$W$2:$W)")
+    sheet.update_cell(2, 21, "=ARRAYFORMULA($V$2:$V-$X$2:$X)")
 
 
 async def update_amounts(sheet: Worksheet, stock: list, message: Message) -> None:

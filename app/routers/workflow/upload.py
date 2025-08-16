@@ -1,20 +1,24 @@
 import json
+from random import randint
+
 from io import BytesIO
 from aiogram import F, Router
-from aiogram.types import Message, CallbackQuery
-from gspread import Worksheet
+from aiogram.types import Message, CallbackQuery, Document
+# from gspread import Worksheet
+import pandas as pd
 
-from app.dicts.convert import divide_by_key, remove_unnecessary_keys
+from app.dicts.convert import divide_by_key, remove_unnecessary_keys, olta_xls_pretty, olta_xls_sort
 from app.sheets.add_amounts import update_amounts
 from app.sheets.add_rows import append_rows
+from app.sheets.olta_populate import add_rows
 from app.sheets import sheets_conn
 
 
 rtr = Router()
 
 
-@rtr.message(F.document)
-async def handle_json_file(message: Message):
+@rtr.message(F.document.file_name.endswith(".json"))
+async def handle_json_file(message: Message) -> None:
     """Отлавливает json файлы, парсит их содержимое и добавляет это содержимое в таблицу."""
 
     key: str = "season"
@@ -64,13 +68,14 @@ async def handle_json_file(message: Message):
     if key == "season":
 
         sheets = {
+            # "Зимняя": "test"
             "Зимняя": "snow_4tochki",
             "Летняя": "summer_4tochki",
             "Всесезонная": "all_season_4tochki",
         }
 
         for item in sheets:
-            ws: Worksheet = await sheets_conn(sheets[item])
+            ws = await sheets_conn(sheets[item])
 
             await append_rows(sheet=ws, stock=separorated_stock[item], message=message)
             await message.answer(
@@ -78,3 +83,31 @@ async def handle_json_file(message: Message):
             )
 
             await update_amounts(sheet=ws, stock=clean_dicts, message=message)
+
+
+@rtr.message(F.document.file_name.endswith(".xls"))
+async def handle_xls_file(message: Message) -> None:
+    file_info = await message.bot.get_file(message.document.file_id)
+    downloaded_file = await message.bot.download_file(file_info.file_path)
+    with downloaded_file:
+        olta: list[dict] = pd.read_excel(downloaded_file).to_dict(orient="records")
+        # [{'Код': '***', 'Артикул ': nan, ...}, {... , 'Номенклатура': 'автошина 145/65 R15 YOKOHAMA IG60 72Q', ...}]
+
+    olta_dict: list[dict] = await olta_xls_pretty(data=olta, pd=pd)
+
+    ws = await sheets_conn("olta_test")
+    await add_rows(data=olta_dict, sheet=ws)
+
+    # print(olta_dict[4540:4550])
+    print(len(olta_dict))
+    # for i in range(20):
+    #     li = randint(0, len(olta_dict))
+    #     print(f"{li}\n{olta_dict[li]}")
+
+
+
+@rtr.message(F.document)
+async def wrong_format(message: Message) -> None:
+    await message.answer(
+        "Допускаются только файлы форматов:\n`.json` для 4tochki\n`.xls` для olta"
+    )

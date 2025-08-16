@@ -30,6 +30,7 @@ async def prepare_table_data(data: list):
             diameter: float = float(re.sub(r"[a-zA-Z]", "", tire["diameter"]))
         except ValueError:
             diameter = ""
+
         hidden_row = [
             tire["cae"],
             tire["width"],
@@ -59,7 +60,7 @@ async def sort_stock(data):
             x["model"],
             x["diameter"],
             x["width"],
-            x["height"],
+            x["height"],  # Проблема с nan значениями
         ),
     )
     return sorted_data
