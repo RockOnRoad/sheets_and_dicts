@@ -1,57 +1,14 @@
-import re
-from re import Match
-from app.sheets import sheets_conn
+from typing import Any
 
-from ..sheets.add_rows import sort_stock
+from aiogram.types import Message, CallbackQuery
 
-
-async def remove_unnecessary_keys(tires):
-    """Облегчает полученный из json файла словарь, удаляя из него не нужные ключи."""
-
-    keys_to_remove = (
-        "price_kryarsk2_rozn",
-        "price_oh_krnekr",
-        "price_oh_krnekr_rozn",
-        "rest_oh_krnekr",
-        "price_oh_bilkal",
-        "price_oh_bilkal_rozn",
-        "rest_oh_bilkal",
-        "price_ok_katsev",
-        "price_ok_katsev_rozn",
-        "rest_ok_katsev",
-        "price_yamka",
-        "price_yamka_rozn",
-        "rest_yamka",
-        "price_dvdv",
-        "price_dvdv_rozn",
-        "rest_dvdv",
-        "gtin",
-        "diametr_out",
-        "thorn_type",
-        "tech",
-        "protection",
-        "usa",
-        "omolog",
-        "side",
-        "axle",
-        "sloy",
-        "grip",
-        "img_small",
-        "img_big_pish",
-        "protector_type",
-        "market_model_id",
-        "brand_info",
-        "model_info",
-        "num_layers_treadmil",
-        "tread_width",
-        "initial_tread_depth",
-    )
-    for line in tires:
-        for key in keys_to_remove:
-            # line.pop(key, None)
-            if key in line:
-                del line[key]
-    return tires
+from ..sheets import _sh, get_ws, STC
+from ..sheets.fresh_stock import add_fresh_items
+from ..sheets.fresh_amounts import add_fresh_amounts
+from ..sheets.master_tables import common_tables_add_arts
+from .file_utils import file_to_dict
+from .json_4tochki_harvester import harv_4tochki
+from .xls_olta_harvester import harv_olta
 
 
 async def divide_by_key(data: list, param: str) -> dict:
@@ -67,139 +24,150 @@ async def divide_by_key(data: list, param: str) -> dict:
     return stock_by_param
 
 
-async def fix_casing(s):
-    """Capitalize only the first segment before underscore."""
-    return " ".join(part.capitalize() for part in s.split("_"))
+async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: str):
+    """**The Very MAIN Function**
 
+    Swallows the **price** file from a supplier and spits out lines of clean data straight to the table.\n
+    Uses all the rest of data processing functions along the way.
 
-async def olta_xls_pretty(data: list[dict], pd) -> list[dict]:
+    :param upd: An update that triggered the function.
+    :param msg_w_file: Message containing the file.
+    :param supplier: name of the supplier, which is also the name of the table.
+    """
+    _sh.worksheets()  # to keep the connection alive
 
-    parsed_lines: list[dict] = []
+    msg_1: str = f"✔︎  (<code>{supplier}</code>) Файл получен.\n"
+    msg_2: str = "⇢  Начинаю обработку"
 
-    season: int = 0  # 0-none, 1-ЗИМНИЕ, 2-ЛЕТНИЕ
-    car_type: int = 0  # 0-none, 1-ЛЕГКОВЫЕ, 2-ЛЕГКОГРУЗОВЫЕ
-    for line in data:
-        if pd.notna(line["Номенклатура"]):
-            if "ЗИМНИЕ" in line["Номенклатура"]:
-                season = 1
-                continue
-            elif "ЛЕТНИЕ" in line["Номенклатура"]:
-                season = 2
-                continue
+    if isinstance(upd, Message):
+        msg_id: int = upd.message_id + 1
+        ch_id: int = upd.chat.id
 
-            if "ЛЕГКОВЫЕ" in line["Номенклатура"]:
-                car_type = 1
-                continue
-            elif "ЛЕГКОГРУЗОВЫЕ" in line["Номенклатура"]:
-                car_type = 2
-                continue
-            elif "ГРУЗОВЫЕ" in line["Номенклатура"]:
-                break
+        mes: str = msg_1 + msg_2
+        await upd.answer((mes))
 
-        
-        if pd.notna(line["Красноярск"]):
-            amount: int = line["Красноярск"] if isinstance(line["Красноярск"], int) else 20
-        else:
-            amount: int = 0
+    elif isinstance(upd, CallbackQuery):
+        msg_id = upd.message.message_id
+        ch_id = upd.message.chat.id
 
-        
-        if amount > 0 and pd.notna(line["Код с префиксом"]):
+        mes: str = msg_1 + msg_2
+        await upd.message.edit_text((mes))
 
-            async def fix_type(value, target_type):
-                if pd.notna(value):
-                    try:
-                        return target_type(value)
-                    except (ValueError, TypeError):
-                        return target_type()  # 0 for int, '' for str
-                else:
-                    return target_type()
-                
+    data: dict[str, list[dict[str, Any]]] | list[dict[str, Any]] = await file_to_dict(
+        msg=msg_w_file, supplier=supplier
+    )
+    ws = await get_ws(supplier)
 
-            pattern = re.compile(
-                r"\s+"
-                r"(?:"
-                r"(?:(?P<width>\d{1,3})[x/]?)?"
-                r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
-                r"\s+(?P<diameter>Z?R\d{2}(?:[,.]\d)?[CС]?)"
-                r")\s+"
-                r"(?P<brand>[^\s]+)\s+"
-                r"(?P<model>.+?)\s+"
-                r"(?P<indexes>\d{2,3}(?:/\d{2,3})?(?:[A-ZТ]|ZR))"
-                r"(?:\s+(?P<xl>XL)(?=\s|$))?"
-                r"(?:\s+(?P<spikes>Ш)(?=\s|$))?"
-                r"(?:\s+(?P<suv>SUV)(?=\s|$))?"
+    if supplier == list(STC)[2]:  # 4tochki
+        validated_stock: dict[str, Any] = await harv_4tochki(data=data, ws=ws)
+        msg_5: str = "позиций не прошли валидацию.\n"
+    elif supplier == list(STC)[3]:
+        validated_stock: dict[str, Any] = await harv_olta(data=data, ws=ws)
+        print(f"Data len {validated_stock["i_data"]}")
+        print(f"New_data len {len(validated_stock["new_data"])}")
+        print(f"Amo_data len {len(validated_stock["amo_data"])}")
+        print(f"Unvalidated len {len(validated_stock["unvalidated_lines"])}")
+
+    msg_3 = f"✔︎  (<code>{msg_w_file.document.file_name}</code>) Файл провалидирован.\n"
+    if len(validated_stock["unvalidated_lines"]) == 0:
+        msg_4 = f"✔︎  Все <b>{validated_stock["i_data"]}</b> "
+        msg_5: str = "строк прошли валидацию.\n"
+    else:
+        msg_4 = f"❍  <b>{len(validated_stock['unvalidated_lines'])}</b> из <b>{validated_stock["i_data"]}</b> "
+        msg_5: str = "строк не прошли валидацию.\n"
+    msg_6: str = f"❍  <b>{len(validated_stock["new_data"])}</b> новых позиций.\n"
+
+    msg_8: str = "⇢  Добавляю провалидированные позиции."  # В табл ...
+
+    msg_10: str = "⇢  Обновляю остатки."
+
+    if validated_stock["new_data"]:
+
+        msg = msg_1 + msg_3 + msg_4 + msg_5 + msg_6 + msg_8
+        await upd.bot.edit_message_text(
+            msg,
+            chat_id=ch_id,
+            message_id=msg_id,
+        )
+
+        # Добавляем позиции в табл. поставщика
+        new_lines = await add_fresh_items(
+            stock=validated_stock["new_data"], ws=ws, supp=supplier
+        )
+
+        msg_9: str = (
+            f"✔︎  <b>{len(new_lines)}</b> новых строк добавлены в таблицу <b>{supplier}</b>.\n"
+        )
+        mes = msg_1 + msg_3 + msg_4 + msg_5 + msg_9
+        await upd.bot.edit_message_text(
+            text=mes + msg_10,
+            chat_id=ch_id,
+            message_id=msg_id,
+        )
+    else:
+        msg_7 = f"❍  <b>{len(validated_stock["new_data"])}</b> новых позиций. Добавлять нечего.\n"
+        mes = msg_1 + msg_3 + msg_4 + msg_5 + msg_7
+        await upd.bot.edit_message_text(
+            text=mes + msg_10,
+            chat_id=ch_id,
+            message_id=msg_id,
+        )
+
+    #  Обновляем остатки в табл. поставщика
+    await add_fresh_amounts(stock=validated_stock["amo_data"], ws=ws, supp=supplier)
+
+    msg_11: str = f"✔︎  <b>Остатки обновлены</b> в таблице (<code>{supplier}</code>).\n"
+    mes = mes + msg_11
+    await upd.bot.edit_message_text(
+        text=mes,
+        chat_id=ch_id,
+        message_id=msg_id,
+    )
+
+    if validated_stock["new_data"]:
+        for table in list(STC)[:2]:
+            msg_12: str = (
+                f"⇢  Добавляю новые артикулы в таблицу (<code>{table}</code>).\n"
+            )
+            msg = mes + msg_12
+            await upd.bot.edit_message_text(
+                msg,
+                chat_id=ch_id,
+                message_id=msg_id,
             )
 
-            m = pattern.search(line["Номенклатура"])
-            params = {}
-            if m:
-                params = m.groupdict()
-            full_code = await fix_type(line.get("Код с префиксом", ""), str)
-            art = await fix_type(line.get("Артикул ", ""), str)
-            name = await fix_type(line.get("Номенклатура", ""), str)
+            ws = await get_ws(table)
 
-            width = await fix_type(params.get("width", 0), int)
-            height = await fix_type(params.get("height", 0), int)
-            diameter = await fix_type(params.get("diameter", ""), str)
-            if height:
-                size = f"{str(width)}/{str(height)} {str(diameter)}"
+            #  Добавляем новые артикулы на 2 главных страницы
+            new_arts: list[str] = await common_tables_add_arts(
+                n_data=validated_stock["new_data"],
+                ws=ws,
+                table=table,
+                supp=supplier,
+            )
+            if new_arts:
+                msg_13: str = (
+                    f"✔︎  <b>{len(new_arts)}</b> новых строк добавлены в таблицу (<code>{table}</code>).\n"
+                )
+                mes = mes + msg_13
+                await upd.bot.edit_message_text(
+                    mes,
+                    chat_id=ch_id,
+                    message_id=msg_id,
+                )
             else:
-                size = f"{str(width)} {str(diameter)}"
-
-            brand_fix = await fix_type(params.get("brand", ""), str)
-            brand = await fix_casing(brand_fix)
-            model_fix = await fix_type(params.get("model", ""), str)
-            model = await fix_casing(model_fix)
-            age = await fix_type(line.get("Харктеристика номенклатуры", ""), str)
-
-            suv = params.get("suv", "")
-
-            marking = brand + " " + model
-
-            ind = params.get("indexes", "")
-            xl = params.get("xl", "")
-            spikes = params.get("spikes", "")
-
-            full_size = size + (f" {ind}" if ind else "") + (f" {xl}" if xl else "")
-            
-            car_type_map: dict = {1: "light", 2: "lt"}
-            season_map: dict = {1: "winter", 2: "summer"}
-
-            price = await fix_type(line.get("Цена с основного склада за п/о", 0), int)
-
-
-            d = {
-                "full_code": full_code,
-                "art": art,
-                "name": name,
-                "brand": brand,
-                "model": model,
-                "suv": suv,
-                "marking": marking, 
-                "width": width,
-                "height": height,
-                "diameter": diameter,
-                "size": size,
-                "siz": f"{width}{height}{re.sub(r"^R(\d{2}(?:[,.]\d)?)(?:[CС])?$", r"\1", diameter)}",
-                "indexes": ind,
-                "xl": xl,
-                "spikes": spikes,
-                "full_size": full_size,
-                "age": age,
-                "lt": car_type_map.get(car_type, ""),
-                "season": season_map.get(season, ""),
-                "amount": amount,
-                "price": price,
-            }
-            parsed_lines.append(d)
-
-    sorted_lines: list[dict] = sorted(parsed_lines, key=lambda x: (x["brand"], x["model"], x["diameter"], x["width"], x["height"], x["full_code"]))
-
-    # for line in sorted_lines[892:942]:
-    #     print(line)
-
-    return sorted_lines
-
-
-async def olta_xls_sort(data) -> dict:
-    pass
+                msg_14: str = f"✔︎  В таблицу (<code>{table}</code>) добавить нечего.\n"
+                mes = mes + msg_14
+                await upd.bot.edit_message_text(
+                    mes,
+                    chat_id=ch_id,
+                    message_id=msg_id,
+                )
+    else:
+        msg_14: str = "✔︎  В главных таблицах нет недостоющих артикулов"
+        mes = mes + msg_14
+        await upd.bot.edit_message_text(
+            mes,
+            chat_id=ch_id,
+            message_id=msg_id,
+        )

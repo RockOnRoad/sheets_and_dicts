@@ -52,6 +52,7 @@ coverage.xml
 .pytest_cache/
 cover/
 test.py
+test_regex.py
 
 # Translations
 *.mo

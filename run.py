@@ -8,12 +8,17 @@ from aiogram import Bot, Dispatcher
 
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 from dotenv import load_dotenv
 
 from app.routers import router as main_router
 
-
 load_dotenv()
+
+
+COMMANDS = [
+    BotCommand(command="add", description="Добавить выгрузку поставщика"),
+]
 
 
 async def main():
@@ -23,6 +28,7 @@ async def main():
         token=os.getenv("TOKEN"),
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
+    await bot.set_my_commands(commands=COMMANDS)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

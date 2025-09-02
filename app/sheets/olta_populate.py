@@ -3,10 +3,11 @@ from random import randint
 
 from gspread import Worksheet
 
+
 async def update_olta_amounts(data, sheet):
-    r: int = float(randint(0, 40))
-    g: int = float(randint(0, 20))
-    b: int = float(randint(0, 40))
+    r = float(randint(0, 40))
+    g = float(randint(0, 20))
+    b = float(randint(0, 40))
 
     today = datetime.today().strftime("%d.%m")
     sheet.insert_cols([[f"Наличие\n{today}"], [f"Стоимость\n{today}"]], col=25)
@@ -50,13 +51,13 @@ async def prepare_amounts_olta(data: list[dict], sheet):
     # print(f"Количество строк наличия - {len(amounts)}")
     return amounts
 
+
 async def upload_to_sheet_olta(data: list[dict], sheet):
     """Вносим данные в таблицу.\n
     - Сначала добавляем необходимое количество пустых строк\n
     - Затем при помощи метода `sheet.batch_update()` заносим скрытые параметры в начало таблицы\n
     - И информативные параметры начиная со столбца `M`
     """
-
 
     if any(data.values()):
         sheet.add_rows(len(data["hidden"]) + 1)
@@ -73,7 +74,7 @@ async def upload_to_sheet_olta(data: list[dict], sheet):
 
 async def prepare_data_olta(data: list[dict]):
     """Оставляем только те значения, которые попадут в таблицу\n
-    - В список "hidden" попадут *9* столбцов: "full_code", "art", "width", "height", "diameter", 
+    - В список "hidden" попадут *9* столбцов: "full_code", "art", "width", "height", "diameter",
     "lt", "season", "spikes" и "siz".
     - В список "visible" попадут *3* столбца: "marking", "full_size" и "age"
     """
@@ -81,9 +82,19 @@ async def prepare_data_olta(data: list[dict]):
     table_data: dict = {}
     hidden_columns = []
     visible_columns = []
-    
+
     for line in data:
-        hidden_row = [line["full_code"], line["art"], line["width"], line["height"], line["diameter"], line["lt"], line["season"], line["spikes"], line["siz"]]
+        hidden_row = [
+            line["full_code"],
+            line["art"],
+            line["width"],
+            line["height"],
+            line["diameter"],
+            line["lt"],
+            line["season"],
+            line["spikes"],
+            line["siz"],
+        ]
         visible_row = [line["marking"], line["full_size"], line["age"]]
 
         hidden_columns.append(hidden_row)
@@ -111,11 +122,5 @@ async def add_rows(data: list[dict], sheet):
         table_ready_stock = await prepare_data_olta(data=fresh_stock)
         await upload_to_sheet_olta(data=table_ready_stock, sheet=sheet)
 
-    # for i in range(50):
-    # print(f"{fresh_stock["amount"]}шт. - {fresh_stock["price"]}р.")
-    print(f"{data[0]}")
-
     current_amounts: list[list] = await prepare_amounts_olta(data=data, sheet=sheet)
-    # for i in range(50):
-    #     print(current_amounts[i])
     await update_olta_amounts(data=current_amounts, sheet=sheet)
