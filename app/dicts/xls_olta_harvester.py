@@ -5,7 +5,7 @@ from typing import Any
 from gspread import Worksheet
 from gspread.utils import ValueRenderOption
 import pandas as pd  # type: ignore
-from pydantic import ValidationError, NonNegativeInt, model_validator, Field
+from pydantic import ValidationError, NonNegativeInt, model_validator
 
 from . import TireSKU, TireStock, VehicleType, SeasonType
 from ..sheets import STC
@@ -17,7 +17,7 @@ class StockOlta(TireStock):
 
     @model_validator(mode="before")
     @classmethod
-    def build_line(cls, line: dict[str, Any]):
+    def _build_line(cls, line: dict[str, Any]):
 
         amo = line.get("Красноярск", 0) if isinstance(line["Красноярск"], int) else 20
         return {
@@ -34,13 +34,13 @@ class SKU_olta(TireSKU):
 
     @model_validator(mode="before")
     @classmethod
-    def build_line(cls, line: dict[str, Any]):
+    def _build_line(cls, line: dict[str, Any]):
         pattern = re.compile(
             r"\s+"
             r"(?:"
             r"(?:(?P<width>\d{1,3})[x/]?)?"
             r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
-            r"\s+(?P<diameter>Z?R\d{2}(?:[,.]\d)?[CС]?)"
+            r"\s*(?P<diameter>(?:(?:RZ|Z)?R)\d{2}(?:[,.]\d)?[CС]?)"
             r")\s+"
             r"(?P<brand>[^\s]+)\s+"
             r"(?P<model>.+?)\s+"
@@ -76,13 +76,11 @@ class SKU_olta(TireSKU):
                 f"{params.get("width", "")}/{params.get("height", "")} {str(diameter)}"
             )
         else:
-            size = f"{params.get("width", "")} {str(diameter)}"
+            size = f"{params.get("width", "")}{str(diameter)}"
 
         name = f'{params.get("brand", "")}_{params.get("model", "")}'.strip()
         name = " ".join(part.capitalize() for part in name.split("_"))
 
-        # age = line.get("age", "")
-        # if isinstance(age, float) and isnan(age):
         age = None if isinstance(line["age"], float) else str(line.get("age", ""))
 
         amo = line.get("amo", 0) if isinstance(line["amo"], int) else 20
@@ -99,7 +97,7 @@ class SKU_olta(TireSKU):
             "stud": True if params.get("stud", None) == "Ш" else False,
             "supp": "olta",
             "name": name,
-            "full_size": f"{size} {params.get("indexes", "")} {' XL' if params.get('xl', None) else ''}",
+            "full_size": f"{size} {params.get("indexes", "")}{' XL' if params.get('xl', None) else ''}",
             "age": age,
             "price": line.get("price", None),
             "amo": amo,
@@ -116,11 +114,11 @@ async def harv_olta(data: list[dict[str, Any]], ws: Worksheet) -> list[dict[str,
     seas: str = None  # None, w, s
     lt: str = None  # None, l, lt
 
-    l: str = STC["olta"]["code_w_prefix"]["l"]
+    _l: str = STC["olta"]["code_w_prefix"]["l"]
     ex_arts: list[str] = {
         item[0] if item else ""
         for item in ws.get(
-            f"{l}3:{l}", value_render_option=ValueRenderOption.unformatted
+            f"{_l}3:{_l}", value_render_option=ValueRenderOption.unformatted
         )
     }
 
@@ -169,9 +167,11 @@ async def harv_olta(data: list[dict[str, Any]], ws: Worksheet) -> list[dict[str,
                 except ValidationError:
                     no_amo_codes.append(obj["Код с префиксом"])
 
+    # print(unvalidated_lines)
     return {
         "i_data": len(data),
-        "new_data": new_data,
+        "new_lines": new_data,
+        "trash_lines": unvalidated_lines,
         "amo_data": amo_data,
-        "unvalidated_lines": unvalidated_lines,
+        "no_amo_arts": no_amo_codes,
     }

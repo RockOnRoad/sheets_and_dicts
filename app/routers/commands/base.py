@@ -70,6 +70,9 @@ async def rm_kb(message: Message):
 
 # @rtr.message(Command("mv"))
 async def mv(message: Message):
+    """
+    I used this one that one time when I had to move handwritten columns from an old sheet to a new one.
+    """
     pass
 
 

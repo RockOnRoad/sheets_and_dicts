@@ -4,7 +4,7 @@ from typing import Any
 
 from gspread import Worksheet
 
-from . import BASE_LAYOUT, STC
+from . import STC
 
 
 async def fix_formulas(ws: Worksheet, supp: str):
@@ -27,24 +27,20 @@ async def fix_formulas(ws: Worksheet, supp: str):
         p_s = STC[supp]["kryarsk2"]["l"]  # Past amounts at solonkl
         ws.update_cell(2, col, f"=ARRAYFORMULA(${f_s}$2:${f_s}-${p_s}$2:${p_s})")
 
-    else:
+    else:  # any other supplier
         col = STC[supp]["Остаток\nΔ"]["n"]  # Column with formula
-        f_s = STC[supp]["Остаток\n"]["l"]  # Fresh amounts at solonkl
-        p_s = STC[supp]["Остаток"]["l"]  # Past amounts at solonkl
+        f_s = STC[supp]["Остаток\n"]["l"]
+        p_s = STC[supp]["Остаток"]["l"]
         ws.update_cell(2, col, f"=ARRAYFORMULA(${f_s}$2:${f_s}-${p_s}$2:${p_s})")
-    # В виде формулы
 
 
 async def insert_amounts(data, ws: Worksheet, supp: str):
     """****
 
-    :param data:
+    :param data: `list[list[str, int | None]]` - grid of amounts and prices (correctly sorted)
     :param ws: 'gspread.Worksheet' - Worksheet object to work with.
+    :param supp: 'str' - name of supplier. Used to reference all the right columns
     """
-
-    r: int = float(random.randint(0, 30))
-    g: int = float(random.randint(0, 15))
-    b: int = float(random.randint(0, 30))
 
     today = datetime.today().strftime("%d.%m")
 
@@ -62,6 +58,25 @@ async def insert_amounts(data, ws: Worksheet, supp: str):
         col: int = STC[supp]["Стоимость\n"]["n"]
         fr: str = STC[supp]["Стоимость\n"]["l"]
         to: str = STC[supp]["Остаток\n"]["l"]
+    elif supp == list(STC)[4]:  # shina_torg
+        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+        col: int = STC[supp]["Стоимость\n"]["n"]
+        fr: str = STC[supp]["Стоимость\n"]["l"]
+        to: str = STC[supp]["Остаток\n"]["l"]
+    elif supp == list(STC)[5]:  # big_machine
+        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+        col: int = STC[supp]["Стоимость\n"]["n"]
+        fr: str = STC[supp]["Стоимость\n"]["l"]
+        to: str = STC[supp]["Остаток\n"]["l"]
+    elif supp == list(STC)[6]:  # simash
+        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+        col: int = STC[supp]["Стоимость\n"]["n"]
+        fr: str = STC[supp]["Стоимость\n"]["l"]
+        to: str = STC[supp]["Остаток\n"]["l"]
+
+    r: int = float(random.randint(0, 30))
+    g: int = float(random.randint(0, 15))
+    b: int = float(random.randint(0, 30))
 
     ws.insert_cols(headers, col=col)
     ws.format(f"{fr}3:{to}", {"backgroundColor": {"red": r, "green": g, "blue": b}})
@@ -93,21 +108,55 @@ async def prepare_amounts(
             if match:
                 amounts.append([match.get("price", None), match.get("amo", 0)])
             else:
-                amounts.append([None, 0, 0])
+                amounts.append([None, 0])
+
+    elif supp == list(STC)[4]:  # shina_torg
+        for pk in keys:
+            match = next((line for line in data if line[key] == pk), None)
+            if match:
+                amounts.append([match.get("price", None), match.get("amo", 0)])
+            else:
+                amounts.append([None, 0])
+
+    elif supp == list(STC)[5]:  # big_machine
+        for pk in keys:
+            match = next((line for line in data if line[key] == pk), None)
+            if match:
+                amounts.append([match.get("price", None), match.get("amo", 0)])
+            else:
+                amounts.append([None, 0])
+
+    elif supp == list(STC)[6]:  # simash
+        for pk in keys:
+            match = next((line for line in data if line[key] == pk), None)
+            if match:
+                amounts.append([match.get("price", None), match.get("amo", 0)])
+            else:
+                amounts.append([None, 0])
     return amounts
 
 
 async def add_fresh_amounts(stock: list[dict[str, Any]], ws: Worksheet, supp: str):
+    """**Updates stock amounts.**\n
+    Creates additional columns and populates them with new stock amounts.\n
+    Compares SKUs by "art" or "code_w_prefix" and populates respective lines with appropriate amounts
+
+    :param stock: `list[dict[str, Any]]` - List of stock objects.
+    :param ws: `gspread.Worksheet` - Worksheet instance where the stock will be updated.
+    :param supp: `str` - Name of supplier for correct dependancies
+    """
 
     if supp == list(STC)[3]:  # olta:
         key: str = "code_w_prefix"
+    elif supp == list(STC)[6]:  # simash:
+        key: str = "local_art"
     else:
         key: str = "art"
-    letter: str = STC[supp][key]["l"]
-    col: str = f"{letter}3:{letter}"
+    _l: str = STC[supp][key]["l"]
+    col: str = f"{_l}3:{_l}"
 
     pks: list[str] = [item[0] if item else "" for item in ws.get(col)]
-    # 4tochki - arts; olta - code_w_prefix
+    # 4tochki - arts; olta - code_w_prefix; simash - local_arts
 
     grid_of_amos: list[str] = await prepare_amounts(
         keys=pks, key=key, data=stock, supp=supp

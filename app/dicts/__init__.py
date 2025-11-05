@@ -3,10 +3,10 @@ from pydantic import BaseModel, Field, PositiveInt, PositiveFloat
 
 
 class VehicleType(str, Enum):
-    LIGHT = "l"
-    LIGHTTRUCK = "lt"
-    MOTORCYCLE = "m"
-    TRUCK = "t"
+    LIGHT = "l"  # light
+    LIGHTTRUCK = "lt"  # light-truck
+    MOTORCYCLE = "m"  # moto
+    TRUCK = "t"  # truck
     SPECIAL = "z"  # 'z' so it stays last alphabetically
 
 
@@ -19,16 +19,15 @@ class SeasonType(str, Enum):
 class TireSKU(BaseModel):
     art: str = ...
     width: int | float = ""
-    hei: int | float = ""
+    hei: int | float | str = ""
     diam: int | float = ""
     siz: str = ""
-    lt: VehicleType = ""  # l: light, lt: light-truck, m: moto, t: truck, z: special
-    seas: SeasonType = ""  # w: winter, s: summer, as: all-season
+    lt: VehicleType = ""
+    seas: SeasonType = ""
     stud: bool = False
     supp: str = ""
     name: str = ""
     full_size: str = ""
-    # price: PositiveInt | PositiveFloat | None = None
 
 
 class TireStock(BaseModel):

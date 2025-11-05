@@ -33,7 +33,8 @@ async def prepare_table_data(data: list[dict[str, Any]]) -> dict[str, list[Any]]
             line["seas"],
             line["stud"],
             line["supp"],
-            line.get("code_w_prefix", ""),
+            line.get("code_w_prefix", line.get("local_art", "")),
+            line.get("text", ""),
         ]
         visible_row = [line["name"], line["full_size"], line.get("age", "")]
 
@@ -45,6 +46,14 @@ async def prepare_table_data(data: list[dict[str, Any]]) -> dict[str, list[Any]]
 
 async def sort_stock(data: list[dict[str, Any]]):
 
+    def _parse_height(value):
+        if value in ("", None):
+            return float("inf")  # put empty at the end
+        try:
+            return float(str(value).replace(",", "."))
+        except ValueError:
+            return float("inf")
+
     sorted_data: list[dict[str, Any]] = list()
     if len(data) > 0:
         sorted_data = sorted(
@@ -54,43 +63,19 @@ async def sort_stock(data: list[dict[str, Any]]):
                 x["name"],
                 x["diam"],
                 x["width"],
-                x["hei"],
+                _parse_height(x.get("hei")),
                 x.get("full_code", ""),
             ),
         )
     return sorted_data
 
 
-# async def fresh(
-#     data: list[dict[str, Any]], table: str, supp: str
-# ) -> list[dict[str, Any]]:
-#     ws = await sheets_conn(table)
-
-#     if table == supp == list(STC)[3]:  # olta
-#         key: str = "code_w_prefix"
-#     else:
-#         key: str = "art"
-#     letter: str = STC[table][key]["l"]
-#     col: str = f"{letter}3:{letter}"
-
-#     ex_arts: list[str] = [item[0] if item else "" for item in ws.get(col)]
-#     fresh_stock: list[dict[str, Any]] = []
-#     for obj in data:
-#         if obj[key] not in ex_arts:
-#             if obj[key] not in fresh_stock:
-#                 fresh_stock.append(obj)
-
-#     return fresh_stock
-
-
-async def add_fresh_items(
-    stock: list[dict[str, Any]], ws: Worksheet, supp: str
-) -> list:
+async def add_new_items(stock: list[dict[str, Any]], ws: Worksheet, supp: str) -> list:
     """**Adds new stock items to the supplier worksheet.**
 
     :param stock: `list[dict[str, Any]]` - List of stock objects.
-    :param ws: `gspread.Worksheet` - Worksheet instance where the stock will be added.
-    :param table: `str` - Name of the worksheet to which the stock will be added.
+    :param ws: `gspread.Worksheet` - Worksheet instance where the SKUs will be added.
+    :param supp: `str` - Name of supplier for correct dependancies
 
     :return: `list` - List of hidden parameters.
     """
@@ -103,17 +88,17 @@ async def add_fresh_items(
 
         number_last_row: int = len(ws.get("A3:A")) + 4
 
-        letter_art: str = BASE_LAYOUT["art"]["l"]
-        letter_name: str = STC[supp]["name"]["l"]
+        _l_art: str = BASE_LAYOUT["art"]["l"]
+        _l_name: str = STC[supp]["name"]["l"]
 
         ws.batch_update(
             data=[
                 {
-                    "range": f"{letter_art}{number_last_row}",
+                    "range": f"{_l_art}{number_last_row}",
                     "values": prepared_stock["hidden"],
                 },
                 {
-                    "range": f"{letter_name}{number_last_row}",
+                    "range": f"{_l_name}{number_last_row}",
                     "values": prepared_stock["visible"],
                 },
             ],

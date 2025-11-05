@@ -1,91 +1,81 @@
+import asyncio
 import json
 import pandas as pd
+from pandas import ExcelFile
 from io import BytesIO
 from typing import Any
 
-from aiogram.types import Message, CallbackQuery, Document
+from aiogram.types import Message, Document
+from gspread import Worksheet
 
-from ..sheets import STC
-
-
-# ---------- json ----------
-async def load_json(file: BytesIO) -> dict:  # 4tochki: dict[str, list[dict[str, Any]]]
-    """
-    Parse JSON file from BytesIO.
-    Caller is responsible for file.seek(0) before calling.
-    """
-    try:
-        return json.load(file)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON: {e}") from e
+from app.sheets import STC
+from app.dicts.json_4tochki_harvester import harv_4tochki
+from app.dicts.xls_olta_harvester import harv_olta
+from app.dicts.xlsx_ShinaTorg_harvester import harv_shina_torg
+from app.dicts.xlsx_BigMachine_harvester import harv_big_machine
+from app.dicts.xlsx_Simash_harvester import harv_simash
 
 
-# ---------- excel ----------
-async def load_excel(file: BytesIO) -> list[dict]:
-    """
-    Parse Excel file into list of dicts.
-    Caller is responsible for file.seek(0) before calling.
-    """
-    try:
-        df = pd.read_excel(file)
-        return df.to_dict(orient="records")
-    except Exception as e:
-        raise ValueError(f"Invalid Excel file: {e}") from e
-
-
-# ---------- csv ----------
-async def load_csv(file: BytesIO) -> list[dict]:
-    """
-    Parse CSV into list of dicts.
-    Caller is responsible for file.seek(0) before calling.
-    """
-    try:
-        df = pd.read_csv(file)
-        return df.to_dict(orient="records")
-    except Exception as e:
-        raise ValueError(f"Invalid CSV file: {e}") from e
-
-
-# ---------- MAIN ----------
-
-
-async def file_to_dict(msg: Message, supplier: str) -> None:
-    """**Processes the uploaded file based on the supplier**.
-
-    :param message: The message containing the file to process.
-    :param supplier: The supplier name to determine how to process the file.
-    :return: Parsed data from the file, or None if processing failed.
-    """
+async def file_handler(msg: Message, supplier: str, ws: Worksheet):
     doc: Document = msg.document
 
-    file = BytesIO()
-    await msg.bot.download(doc.file_id, destination=file)
-    file.seek(0)
+    validated_data: dict = {}
 
-    name = doc.file_name.lower()
-    mime = doc.mime_type
+    with BytesIO() as file:
+        await msg.bot.download(doc.file_id, destination=file)
+        file.seek(0)
 
-    try:
-        if supplier == list(STC)[2]:
+        name = doc.file_name.lower()
+        mime = doc.mime_type
+
+        data: Any = None
+        print("File loop started")
+
+        try:
             if name.endswith(".json") or mime == "application/json":
-                data = await load_json(file)  # 4tochki: dict[str, list[dict[str, Any]]]
-            else:
-                await msg.reply("Файл не поддерживается (нужен JSON).")
-                #  Переделать чтобы на callback отвечал через edit_text
-                return
-        elif supplier in list(STC)[3:]:
-            if name.endswith((".xls", ".xlsx")) or "excel" in mime:
-                data = await load_excel(file)
-            else:
-                await msg.reply("Файл не поддерживается (нужен Excel).")
-                return
-        else:
-            await msg.reply("Неизвестный поставщик.")
-            return
-    except ValueError as e:
-        await msg.reply(str(e))
-        return
-    finally:
-        file.close()
+                if supplier == list(STC)[2]:  # 4tochki
+                    try:
+                        data = json.load(file)
+                    except json.JSONDecodeError as e:
+                        raise ValueError(f"Invalid JSON: {e}") from e
+                    validated_data = await harv_4tochki(data=data, ws=ws)
+                else:
+                    await msg.reply(f"<b>.json</b> Поставщик {supplier} не найден")
+                    return
 
-    return data
+            elif name.endswith((".xls", ".xlsx")) or "excel" in mime:
+                print("Excel detected")
+                if supplier == list(STC)[3]:  # olta
+                    #  fix: Тоже возвращать pd.ExcelFile
+                    df = pd.read_excel(file)
+                    data: dict = df.to_dict(orient="records")
+                    validated_data: list[dict[str, Any]] = await harv_olta(
+                        data=data, ws=ws
+                    )
+                elif supplier == list(STC)[4]:  # shina_torg
+                    #  fix: Тоже возвращать pd.ExcelFile
+                    df = pd.read_excel(file)
+                    data: dict = df.to_dict(orient="records")
+                    validated_data: list[dict[str, Any]] = await harv_shina_torg(
+                        raw_data=data, ws=ws
+                    )
+                elif supplier == list(STC)[5]:  # big_mashina
+                    data: ExcelFile = pd.ExcelFile(file)
+                    validated_data = await harv_big_machine(xlsx=data, ws=ws)
+                elif supplier == list(STC)[6]:  # simash
+                    data: ExcelFile = pd.ExcelFile(file)
+                    validated_data = await harv_simash(xlsx=data, ws=ws)
+                    print(validated_data["i_data"])
+                    print(len(validated_data["amo_data"]))
+                else:
+                    await msg.reply(f"<b>excel</b> Поставщик {supplier} не найден")
+                    raise ValueError(f"<b>excel</b> Поставщик {supplier} не найден")
+            else:
+                await msg.reply("Файл не поддерживается (нужен Excel или JSON).")
+                return
+
+        except ValueError as e:
+            await msg.reply(str(e))
+            return
+
+    return validated_data

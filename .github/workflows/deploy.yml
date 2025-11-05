@@ -1,0 +1,23 @@
+name: Deploy Bot
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    # https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/use-in-a-workflow#using-custom-labels-to-route-jobs
+    # https://docs.github.com/en/actions/concepts/runners/actions-runner-controller
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect and deploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /opt/aiogram-bot
+            git pull
+            ./update_and_restart.sh

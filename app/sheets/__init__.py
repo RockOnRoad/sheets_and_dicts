@@ -1,10 +1,7 @@
 import os
 import gspread
 from copy import deepcopy
-from typing import Any
 
-from gspread import Worksheet
-from google.oauth2.service_account import Credentials
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,26 +20,6 @@ async def get_ws(name: str):
     """Fetch worksheet by name, quick lookup (no extra API call)."""
     return worksheets[name]
 
-
-# async def sheets_conn(which_sheet: str = None) -> Worksheet | None:
-#     scopes = [
-#         "https://www.googleapis.com/auth/spreadsheets",
-#     ]
-
-#     creds = Credentials.from_service_account_file(
-#         "app/sheets/credantials.json", scopes=scopes
-#     )
-#     client = gspread.authorize(creds)
-
-#     sheet_id: str = os.getenv("SHEET_ID")
-
-#     try:
-#         sheet: Worksheet = client.open_by_key(sheet_id).worksheet(which_sheet)
-#         return sheet
-#     except gspread.exceptions.WorksheetNotFound:
-#         return None
-
-#  Main keys represent names of tables, secondary keys are names of columns
 
 BASE_LAYOUT: dict[str, dict[str, str | int]] = {
     "art": {"l": "A", "n": 1},
@@ -85,6 +62,26 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "olta\nСтоимость\n": {"l": "AG", "n": 33},
         "olta\nΔ цена\n": {"l": "AH", "n": 34},
         "olta\nсрок": {"l": "AI", "n": 35},
+        "shina_torg\nСтоимость\nx4": {"l": "AJ", "n": 36},
+        "shina_torg\nЦена\nx4": {"l": "AK", "n": 37},
+        "shina_torg\nНаличие\n": {"l": "AL", "n": 38},
+        "shina_torg\nΔ шт.\n": {"l": "AM", "n": 39},
+        "shina_torg\nСтоимость\n": {"l": "AN", "n": 40},
+        "shina_torg\nΔ цена\n": {"l": "AO", "n": 41},
+        "shina_torg\nгод": {"l": "AP", "n": 42},
+        "big_machine\nСтоимость\nx4": {"l": "AQ", "n": 43},
+        "big_machine\nЦена\nx4": {"l": "AR", "n": 44},
+        "big_machine\nНаличие\n": {"l": "AS", "n": 45},
+        "big_machine\nΔ шт.\n": {"l": "AT", "n": 46},
+        "big_machine\nСтоимость\n": {"l": "AU", "n": 47},
+        "big_machine\nΔ цена\n": {"l": "AV", "n": 48},
+        "simash\nСтоимость\nx4": {"l": "AW", "n": 49},
+        "simash\nЦена\nx4": {"l": "AX", "n": 50},
+        "simash\nНаличие\n": {"l": "AY", "n": 51},
+        "simash\nΔ шт.\n": {"l": "AZ", "n": 52},
+        "simash\nСтоимость\n": {"l": "BA", "n": 53},
+        "simash\nΔ цена\n": {"l": "BB", "n": 54},
+        "simash\nгод": {"l": "BC", "n": 55},
     },
     "Остатки поставщиков (лето)": {
         **deepcopy(BASE_LAYOUT),
@@ -114,6 +111,26 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "olta\nСтоимость\n": {"l": "AG", "n": 33},
         "olta\nΔ цена\n": {"l": "AH", "n": 34},
         "olta\nсрок": {"l": "AI", "n": 35},
+        "shina_torg\nСтоимость\nx4": {"l": "AJ", "n": 36},
+        "shina_torg\nЦена\nx4": {"l": "AK", "n": 37},
+        "shina_torg\nНаличие\n": {"l": "AL", "n": 38},
+        "shina_torg\nΔ шт.\n": {"l": "AM", "n": 39},
+        "shina_torg\nСтоимость\n": {"l": "AN", "n": 40},
+        "shina_torg\nΔ цена\n": {"l": "AO", "n": 41},
+        "shina_torg\nгод": {"l": "AP", "n": 42},
+        "big_machine\nСтоимость\nx4": {"l": "AQ", "n": 43},
+        "big_machine\nЦена\nx4": {"l": "AR", "n": 44},
+        "big_machine\nНаличие\n": {"l": "AS", "n": 45},
+        "big_machine\nΔ шт.\n": {"l": "AT", "n": 46},
+        "big_machine\nСтоимость\n": {"l": "AU", "n": 47},
+        "big_machine\nΔ цена\n": {"l": "AV", "n": 48},
+        "simash\nСтоимость\nx4": {"l": "AW", "n": 49},
+        "simash\nЦена\nx4": {"l": "AX", "n": 50},
+        "simash\nНаличие\n": {"l": "AY", "n": 51},
+        "simash\nΔ шт.\n": {"l": "AZ", "n": 52},
+        "simash\nСтоимость\n": {"l": "BA", "n": 53},
+        "simash\nΔ цена\n": {"l": "BB", "n": 54},
+        "simash\nгод": {"l": "BC", "n": 55},
     },
     "4tochki": {
         **deepcopy(BASE_LAYOUT),
@@ -156,13 +173,45 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "plus_4": {"l": "L", "n": 12},
         "name": {"l": "M", "n": 13},
         "full_size": {"l": "N", "n": 14},
+        "year": {"l": "O", "n": 15},
+        "Коммент": {"l": "P", "n": 16},
+        "Стоимость\nΔ": {"l": "Q", "n": 17},
+        "Остаток\nΔ": {"l": "R", "n": 18},
+        "Стоимость\n": {"l": "S", "n": 19},
+        "Остаток\n": {"l": "T", "n": 20},
+        "Стоимость": {"l": "U", "n": 21},
+        "Остаток": {"l": "V", "n": 22},
     },
-    "big_shina": {
+    "big_machine": {
         **deepcopy(BASE_LAYOUT),
         "plus_2": {"l": "J", "n": 10},
         "plus_3": {"l": "K", "n": 11},
         "plus_4": {"l": "L", "n": 12},
         "name": {"l": "M", "n": 13},
         "full_size": {"l": "N", "n": 14},
+        "year": {"l": "O", "n": 15},
+        "Коммент": {"l": "P", "n": 16},
+        "Стоимость\nΔ": {"l": "Q", "n": 17},
+        "Остаток\nΔ": {"l": "R", "n": 18},
+        "Стоимость\n": {"l": "S", "n": 19},
+        "Остаток\n": {"l": "T", "n": 20},
+        "Стоимость": {"l": "U", "n": 21},
+        "Остаток": {"l": "V", "n": 22},
+    },
+    "simash": {
+        **deepcopy(BASE_LAYOUT),
+        "local_art": {"l": "J", "n": 10},
+        "supplier_naming": {"l": "K", "n": 11},
+        "plus_4": {"l": "L", "n": 12},
+        "name": {"l": "M", "n": 13},
+        "full_size": {"l": "N", "n": 14},
+        "year": {"l": "O", "n": 15},
+        "Коммент": {"l": "P", "n": 16},
+        "Стоимость\nΔ": {"l": "Q", "n": 17},
+        "Остаток\nΔ": {"l": "R", "n": 18},
+        "Стоимость\n": {"l": "S", "n": 19},
+        "Остаток\n": {"l": "T", "n": 20},
+        "Стоимость": {"l": "U", "n": 21},
+        "Остаток": {"l": "V", "n": 22},
     },
 }

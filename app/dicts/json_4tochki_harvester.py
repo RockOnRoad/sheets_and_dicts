@@ -140,7 +140,8 @@ async def harv_4tochki(data: dict[str, list[dict[str, Any]]], ws: Worksheet) -> 
 
     return {
         "i_data": len(data["tires"]),
-        "new_data": new_data,
+        "new_lines": new_data,
+        "trash_lines": unvalidated_lines,
         "amo_data": amo_data,
-        "unvalidated_lines": unvalidated_lines,
+        "no_amo_arts": no_amo_codes,
     }
