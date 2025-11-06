@@ -1,14 +1,11 @@
-import asyncio
-
-from aiogram import F, Router
+from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, ReplyKeyboardRemove
 
-from ...kbds import reply_buttons, inline_buttons
-from ...sheets import STC
-from ...sheets.fresh_amounts import fix_formulas
-from ...sheets.transfer import move
+from ...kbds import inline_buttons
+from app.sheets import STC
+
 from ..router_objects import AdminCheck, Supplier_Msg_Add
 
 
@@ -17,66 +14,42 @@ rtr = Router(name=__name__)
 
 @rtr.message(AdminCheck(), CommandStart())
 async def start_admin(message: Message):
-    print("start_admin command received from user:", message.from_user.id)
     await message.answer(
         f"""
-<b>Шалом, {message.from_user.full_name}!</b>
+<b>Привет {message.from_user.full_name}!</b>
 
 Эта версия бота может:
 - Обновлять остатки товаров поставщиков в таблице, считывая их из Excel или JSON файлов.
-    Поддерживаются следующие файлы:
-    - <b>JSON</b> файл с расширением <code>.json</code> выгрузка из 4tochki.
-    - <b>Excel</b> файл с расширением <code>.xls</code> из OLTA.
+
+  Поддерживаются следующие файлы:
+Выгрузка 4tochki.
+  - <b>JSON</b> файл с расширением (<b>.json</b>)
+Прайс листы остальных поставщиков.
+  - <b>Excel</b> файл с расширением (<b>.xls</b>) или (<b>.xlsx</b>).
+
+Для загрузки документа используйте команду /add\nили отправьте файл напрямую в чат.
 """
     )
 
 
-@rtr.message(CommandStart())
-async def start(message: Message):
-    print("start command received from user:", message.from_user.id)
-    await message.answer(f"Salom, {message.from_user.full_name}!")
-
-
-@rtr.message(Command("help"))
-async def help(message: Message):
-    print("help command received from user:", message.from_user.id)
+@rtr.message(AdminCheck(), Command("help"))
+async def help_admin(message: Message):
+    print("help command received from admin user:", message.from_user.id)
+    suppliers = "\n".join(f"- {supp}" for supp in list(STC)[2:])
     await message.answer(
-        """
-<b>Использование бота:</b>
+        f"""
+Этот бот выполняет одну лишь функцию:
+<b>Обновляет остатки товаров поставщиков в таблице Google Sheets.</b>
 
-- (Напишу когда будет готово)
+Доступные поставщики:
+{suppliers}
+
+Доступные команды:
+/start - Приветствие и информация о возможностях бота.
+/help - Показать это сообщение.
+/add - Начать процесс добавления остатков товаров от поставщика.
 """
     )
-
-
-@rtr.message(Command("test"))
-async def test(message: Message):
-    print("test command received from user:", message.from_user.id)
-    await message.answer("Test command received ✅")
-    # await message.answer(f"Message ID: {message.message_id}")
-    await asyncio.sleep(5)
-    await message.bot.edit_message_text(
-        text="Test command finished ✅",
-        chat_id=message.chat.id,
-        message_id=message.message_id + 1,
-    )
-
-
-@rtr.message(Command("rm_kb"))
-async def rm_kb(message: Message):
-    print("rm_kb command received from user:", message.from_user.id)
-    await message.answer("Keyboard removed ✅", reply_markup=ReplyKeyboardRemove())
-
-
-# @rtr.message(Command("mv"))
-async def mv(message: Message):
-    """
-    I used this one that one time when I had to move handwritten columns from an old sheet to a new one.
-    """
-    pass
-
-
-# SUPPLIERS STOCK ADD
 
 
 @rtr.message(AdminCheck(), Command("add"))
@@ -100,3 +73,32 @@ async def add_stock(message: Message, state: FSMContext) -> None:
     #  inline_buttons обрабатывает данные в формате (buttons = {callback_data: button_text})
     i_kb = await inline_buttons(buttons=buttons, columns=2)
     await message.answer("<b>Чей прайс обновляем?</b>", reply_markup=i_kb)
+
+
+@rtr.message(CommandStart())
+async def start(message: Message):
+    print("start command received from user:", message.from_user.id)
+    await message.answer("Вы не авторизованы. Обратитесь к администратору.")
+
+
+@rtr.message(Command("help"))
+async def help(message: Message):
+    print("help command received from user:", message.from_user.id)
+    await message.answer("Вы не авторизованы. Обратитесь к администратору.")
+
+
+@rtr.message(Command("add"))
+async def add(message: Message, state: FSMContext) -> None:
+    print("add command received from user:", message.from_user.id)
+    await state.clear()
+    await message.answer("Вы не авторизованы. Обратитесь к администратору.")
+
+
+@rtr.message(Command("test"))
+async def test(message: Message):
+    pass
+
+
+@rtr.message(Command("rm_kb"))
+async def rm_kb(message: Message):
+    await message.answer("Keyboard removed ✅", reply_markup=ReplyKeyboardRemove())

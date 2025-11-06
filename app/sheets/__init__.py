@@ -33,7 +33,7 @@ BASE_LAYOUT: dict[str, dict[str, str | int]] = {
     "supp": {"l": "I", "n": 9},
 }
 
-STC: dict[str, dict[str, dict[str, str | int]]] = {
+STC: dict[str, dict[str, dict[str, str | int]]] = {  # Supplier Table Configuration
     "Остатки поставщиков (зима)": {
         **deepcopy(BASE_LAYOUT),
         "plus_2": {"l": "J", "n": 10},
@@ -61,14 +61,14 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "olta\nΔ шт.\n": {"l": "AF", "n": 32},
         "olta\nСтоимость\n": {"l": "AG", "n": 33},
         "olta\nΔ цена\n": {"l": "AH", "n": 34},
-        "olta\nсрок": {"l": "AI", "n": 35},
+        "olta\nгод\n": {"l": "AI", "n": 35},
         "shina_torg\nСтоимость\nx4": {"l": "AJ", "n": 36},
         "shina_torg\nЦена\nx4": {"l": "AK", "n": 37},
         "shina_torg\nНаличие\n": {"l": "AL", "n": 38},
         "shina_torg\nΔ шт.\n": {"l": "AM", "n": 39},
         "shina_torg\nСтоимость\n": {"l": "AN", "n": 40},
         "shina_torg\nΔ цена\n": {"l": "AO", "n": 41},
-        "shina_torg\nгод": {"l": "AP", "n": 42},
+        "shina_torg\nгод\n": {"l": "AP", "n": 42},
         "big_machine\nСтоимость\nx4": {"l": "AQ", "n": 43},
         "big_machine\nЦена\nx4": {"l": "AR", "n": 44},
         "big_machine\nНаличие\n": {"l": "AS", "n": 45},
@@ -81,7 +81,7 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "simash\nΔ шт.\n": {"l": "AZ", "n": 52},
         "simash\nСтоимость\n": {"l": "BA", "n": 53},
         "simash\nΔ цена\n": {"l": "BB", "n": 54},
-        "simash\nгод": {"l": "BC", "n": 55},
+        "simash\nгод\n": {"l": "BC", "n": 55},
     },
     "Остатки поставщиков (лето)": {
         **deepcopy(BASE_LAYOUT),
@@ -110,14 +110,14 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "olta\nΔ шт.\n": {"l": "AF", "n": 32},
         "olta\nСтоимость\n": {"l": "AG", "n": 33},
         "olta\nΔ цена\n": {"l": "AH", "n": 34},
-        "olta\nсрок": {"l": "AI", "n": 35},
+        "olta\nгод\n": {"l": "AI", "n": 35},
         "shina_torg\nСтоимость\nx4": {"l": "AJ", "n": 36},
         "shina_torg\nЦена\nx4": {"l": "AK", "n": 37},
         "shina_torg\nНаличие\n": {"l": "AL", "n": 38},
         "shina_torg\nΔ шт.\n": {"l": "AM", "n": 39},
         "shina_torg\nСтоимость\n": {"l": "AN", "n": 40},
         "shina_torg\nΔ цена\n": {"l": "AO", "n": 41},
-        "shina_torg\nгод": {"l": "AP", "n": 42},
+        "shina_torg\nгод\n": {"l": "AP", "n": 42},
         "big_machine\nСтоимость\nx4": {"l": "AQ", "n": 43},
         "big_machine\nЦена\nx4": {"l": "AR", "n": 44},
         "big_machine\nНаличие\n": {"l": "AS", "n": 45},
@@ -130,7 +130,7 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "simash\nΔ шт.\n": {"l": "AZ", "n": 52},
         "simash\nСтоимость\n": {"l": "BA", "n": 53},
         "simash\nΔ цена\n": {"l": "BB", "n": 54},
-        "simash\nгод": {"l": "BC", "n": 55},
+        "simash\nгод\n": {"l": "BC", "n": 55},
     },
     "4tochki": {
         **deepcopy(BASE_LAYOUT),
@@ -157,7 +157,7 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "plus_3": {"l": "L", "n": 12},
         "name": {"l": "M", "n": 13},
         "full_size": {"l": "N", "n": 14},
-        "Срок": {"l": "O", "n": 15},
+        "year": {"l": "O", "n": 15},
         "Коммент": {"l": "P", "n": 16},
         "Стоимость\nΔ": {"l": "Q", "n": 17},
         "Остаток\nΔ": {"l": "R", "n": 18},
@@ -198,7 +198,7 @@ STC: dict[str, dict[str, dict[str, str | int]]] = {
         "Стоимость": {"l": "U", "n": 21},
         "Остаток": {"l": "V", "n": 22},
     },
-    "simash": {
+    "simoshkevich": {
         **deepcopy(BASE_LAYOUT),
         "local_art": {"l": "J", "n": 10},
         "supplier_naming": {"l": "K", "n": 11},

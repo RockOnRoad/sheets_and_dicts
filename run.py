@@ -18,6 +18,7 @@ load_dotenv()
 
 COMMANDS = [
     BotCommand(command="add", description="Добавить выгрузку поставщика"),
+    BotCommand(command="help", description="Помощь по командам бота"),
 ]
 
 

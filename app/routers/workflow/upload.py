@@ -1,10 +1,7 @@
-from time import time
-
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery
 
-import pandas as pd  # type: ignore
 
 from ..router_objects import (
     AdminCheck,
