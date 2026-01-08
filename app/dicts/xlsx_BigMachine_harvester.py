@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from gspread import Worksheet
@@ -7,9 +6,9 @@ import pandas as pd
 from pandas import ExcelFile, DataFrame
 from pydantic import ValidationError, NonNegativeInt, model_validator
 
-from app.dicts import names
 from app.dicts import TireSKU, TireStock, SeasonType, VehicleType
 from app.sheets import STC
+from app.sheets.parse_supplier_naming import parse_stud
 
 
 class Stock_BigMashina(TireStock):
@@ -40,120 +39,148 @@ class SKU_BigMashina(TireSKU):
     @classmethod
     def _build_line(cls, obj: dict[str, Any]):
 
-        # pattern = r"(?<!\d)(?:LT\s*)?(?:185|35)(?=[xX/ ]|$)"
+        parsed_obj: dict[str, Any] = parse_stud(text=obj["naming"].upper(), seq=True)
 
-        def _extract_size(pattern, text) -> dict | dict[str, str]:
-            if m := re.search(pattern, text):
-                try:
-                    lt = m.group("lt")
-                except AttributeError:
-                    lt = None
+        siz: str = f"{parsed_obj['width']}{parsed_obj['height']}{parsed_obj['diam']}"
+        name: str = f"{parsed_obj['brand']} {parsed_obj['model']}{parsed_obj['suv']}"
 
-                try:
-                    width = m.group("width").replace(",", ".")
-                    width = float(width) if "." in width else int(width)
-                except AttributeError:
-                    width = None
-
-                try:
-                    hei = m.group("height").replace(",", ".")
-                    hei = float(hei) if "." in hei else int(hei)
-                except AttributeError:
-                    hei = ""
-
-                try:
-                    comercial = m.group("comercial")
-                except AttributeError:
-                    comercial = None
-
-                result = {
-                    "lt": lt,
-                    "width": width,
-                    "height": hei,
-                    "comercial": comercial,
-                }
-            else:
-                result = {
-                    "lt": None,
-                    "width": None,
-                    "height": None,
-                    "comercial": None,
-                }
-            return result
-
-        size_pattern = (
-            r"(?:"
-            r"(?:(?P<lt>LT)?)"
-            r"(?:(?P<width>\d{2,3})[/xX*]?)?"
-            r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
-            r"(?:(?P<comercial> C))?"
-            r")"
-        )
-        size_extract: dict[str, str] = _extract_size(size_pattern, obj["width_and_hei"])
-
-        siz: str = (
-            f"{size_extract.get("width")}{size_extract.get("height")}{obj.get("diam", "")}{obj.get("comercial", "")}"
-        )
-
-        def _extract(find: str, text: str = obj.get("naming", "")) -> str:
-            found = False
-            if find in text:
-                found = True
-            return found
-
-        def _extract_value(names_ali: dict, text: str = obj.get("naming", "")) -> str:
-            text_upper = text.upper().replace("_", " ")
-            for name_raw, name_std in names_ali.items():
-                if _extract(text=text_upper, find=name_raw):
-                    return name_std
-            return "?"
-
-        try:
-            brand: str = _extract_value(
-                names_ali=names.BRANDS, text=obj.get("brand", "")
-            )
-        except KeyError:
-            brand = "?"
-
-        try:
-            model: str = _extract_value(names_ali=names.MODELS[brand])
-        except KeyError:
-            model = "?"
-
-        suv: str = " SUV" if _extract(find=" SUV ") else ""
-        xl: str = " XL" if _extract(find=" XL") else ""
-
-        indexes_pattern = r"(?P<indexes>\d{2,3}(?:/\d{2,3})?(?:[A-ZТ]|ZR))"
-        indexes = (
-            m.group()
-            if (m := re.search(indexes_pattern, obj.get("naming", "")))
-            else ""
-        )
-
-        _d = f"R{obj["diam"]}" if obj["diam"] else ""
-        full_size = (
-            f"{size_extract.get("width")}/{size_extract.get("height")}{_d}{obj.get("comercial", "")} "
-            f"{indexes}{xl}"
+        h = f"/{parsed_obj['height']}" if parsed_obj["height"] else ""
+        full_size: str = (
+            f"{parsed_obj['width']}{h}{parsed_obj['diameter']}"
+            f" {parsed_obj['indexes']}{parsed_obj['xl']}"
         )
 
         return {
             "art": obj.get("art", None),
-            "width": (
-                size_extract.get("width") if isinstance(size_extract, dict) else None
-            ),
-            "hei": (
-                size_extract.get("height") if isinstance(size_extract, dict) else ""
-            ),
-            "diam": obj.get("diam", None),
+            "width": parsed_obj["width"],
+            "hei": parsed_obj["height"],
+            "diam": parsed_obj["diam"],
             "siz": siz,
             "lt": obj.get("lt", None),
             "seas": obj.get("seas", None),
             "stud": obj.get("stud", False),
             # "age": ...,
             "supp": "big_machine",
-            "name": f"{brand} {model}{suv}",
+            "name": name,
             "full_size": full_size,
+            "text": obj["naming"],
         }
+
+        # # pattern = r"(?<!\d)(?:LT\s*)?(?:185|35)(?=[xX/ ]|$)"
+
+        # def _extract_size(pattern, text) -> dict | dict[str, str]:
+        #     if m := re.search(pattern, text):
+        #         try:
+        #             lt = m.group("lt")
+        #         except AttributeError:
+        #             lt = None
+
+        #         try:
+        #             width = m.group("width").replace(",", ".")
+        #             width = float(width) if "." in width else int(width)
+        #         except AttributeError:
+        #             width = None
+
+        #         try:
+        #             hei = m.group("height").replace(",", ".")
+        #             hei = float(hei) if "." in hei else int(hei)
+        #         except AttributeError:
+        #             hei = ""
+
+        #         try:
+        #             comercial = m.group("comercial")
+        #         except AttributeError:
+        #             comercial = None
+
+        #         result = {
+        #             "lt": lt,
+        #             "width": width,
+        #             "height": hei,
+        #             "comercial": comercial,
+        #         }
+        #     else:
+        #         result = {
+        #             "lt": None,
+        #             "width": None,
+        #             "height": None,
+        #             "comercial": None,
+        #         }
+        #     return result
+
+        # size_pattern = (
+        #     r"(?:"
+        #     r"(?:(?P<lt>LT)?)"
+        #     r"(?:(?P<width>\d{2,3})[/xX*]?)?"
+        #     r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
+        #     r"(?:(?P<comercial> C))?"
+        #     r")"
+        # )
+        # size_extract: dict[str, str] = _extract_size(size_pattern, obj["width_and_hei"])
+
+        # siz: str = (
+        #     f"{size_extract.get("width")}{size_extract.get("height")}{obj.get("diam", "")}{obj.get("comercial", "")}"
+        # )
+
+        # def _extract(find: str, text: str = obj.get("naming", "")) -> str:
+        #     found = False
+        #     if find in text:
+        #         found = True
+        #     return found
+
+        # def _extract_value(names_ali: dict, text: str = obj.get("naming", "")) -> str:
+        #     text_upper = text.upper().replace("_", " ")
+        #     for name_raw, name_std in names_ali.items():
+        #         if _extract(text=text_upper, find=name_raw):
+        #             return name_std
+        #     return "?"
+
+        # try:
+        #     brand: str = _extract_value(
+        #         names_ali=names.BRANDS, text=obj.get("brand", "")
+        #     )
+        # except KeyError:
+        #     brand = "?"
+
+        # try:
+        #     model: str = _extract_value(names_ali=names.MODELS[brand])
+        # except KeyError:
+        #     model = "?"
+
+        # suv: str = " SUV" if _extract(find=" SUV ") else ""
+        # xl: str = " XL" if _extract(find=" XL") else ""
+
+        # indexes_pattern = r"(?P<indexes>\d{2,3}(?:/\d{2,3})?(?:[A-ZТ]|ZR))"
+        # indexes = (
+        #     m.group()
+        #     if (m := re.search(indexes_pattern, obj.get("naming", "")))
+        #     else ""
+        # )
+
+        # _d = f"R{obj["diam"]}" if obj["diam"] else ""
+        # full_size = (
+        #     f"{size_extract.get("width")}/{size_extract.get("height")}{_d}{obj.get("comercial", "")} "
+        #     f"{indexes}{xl}"
+        # )
+
+        # return {
+        #     "art": obj.get("art", None),
+        #     "width": (
+        #         size_extract.get("width") if isinstance(size_extract, dict) else None
+        #     ),
+        #     "hei": (
+        #         size_extract.get("height") if isinstance(size_extract, dict) else ""
+        #     ),
+        #     "diam": obj.get("diam", None),
+        #     "siz": siz,
+        #     "lt": obj.get("lt", None),
+        #     "seas": obj.get("seas", None),
+        #     "stud": obj.get("stud", False),
+        #     # "age": ...,
+        #     "supp": "big_machine",
+        #     "name": f"{brand} {model}{suv}",
+        #     "full_size": full_size,
+        #     "text": "",
+        # }
 
 
 async def harv_big_machine(xlsx: ExcelFile, ws: Worksheet) -> None:
@@ -225,13 +252,14 @@ async def harv_big_machine(xlsx: ExcelFile, ws: Worksheet) -> None:
         ]
         df_amounts: DataFrame = df[[table["art"], table["price"], table["amo"]]]
 
-        validated_data["i_data"] += len(df)
-
         new_SKUs: list[dict[str, Any]] = df_filtered.to_dict(orient="records")
 
         for sku in new_SKUs:
             if sku[table["art"]] == "Артикул производителя":
                 continue
+
+            validated_data["i_data"] += 1
+
             try:
                 sku_object = {
                     "art": str(sku[table["art"]]),

@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field, PositiveInt, PositiveFloat
+from pydantic import BaseModel, PositiveInt, PositiveFloat
 
 
 class VehicleType(str, Enum):
@@ -28,6 +28,7 @@ class TireSKU(BaseModel):
     supp: str = ""
     name: str = ""
     full_size: str = ""
+    text: str = ""
 
 
 class TireStock(BaseModel):

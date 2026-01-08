@@ -1,4 +1,3 @@
-import re
 from typing import Any
 
 from gspread import Worksheet
@@ -7,13 +6,12 @@ import pandas as pd
 from pandas import ExcelFile, DataFrame
 from pydantic import ValidationError, NonNegativeInt, model_validator
 
-from app.dicts import names
 from app.dicts import TireSKU, TireStock, SeasonType, VehicleType
 from app.sheets import STC
 from app.sheets.parse_supplier_naming import parse_all
 
 
-class Stock_Simash(TireStock):
+class Stock_Simoshkevich(TireStock):
     local_art: str = ...
     amo: NonNegativeInt = 0
 
@@ -33,7 +31,7 @@ class Stock_Simash(TireStock):
         }
 
 
-class SKU_Simash(TireSKU):
+class SKU_Simoshkevich(TireSKU):
     local_art: str = ...
     age: str | None = None
     text: str = ""
@@ -53,8 +51,6 @@ class SKU_Simash(TireSKU):
 
         return {
             "art": obj["art"],
-            "local_art": obj["local_art"],
-            "text": obj["naming"],
             "width": parsed_obj["width"],
             "hei": parsed_obj["height"],
             "diam": parsed_obj["diam"],
@@ -63,18 +59,20 @@ class SKU_Simash(TireSKU):
             "seas": obj["seas"],
             "stud": parsed_obj["stud"],
             "age": parsed_obj["year"],
-            "supp": "simash",
+            "supp": "simoshkevich",
             "name": name,
             "full_size": full_size,
+            "local_art": obj["local_art"],
+            "text": obj["naming"],
         }
 
 
-async def harv_simash(xlsx: ExcelFile, ws: Worksheet) -> None:
+async def harv_simoshkevich(xlsx: ExcelFile, ws: Worksheet) -> None:
     #  Добавить страну производителя в таблицу
 
     df: DataFrame = pd.read_excel(xlsx, xlsx.sheet_names[0])
 
-    _l: str = STC["simash"]["local_art"]["l"]
+    _l: str = STC["simoshkevich"]["local_art"]["l"]
     ex_local_arts: set[str] = {
         item[0] if item else ""
         for item in ws.get(
@@ -82,16 +80,16 @@ async def harv_simash(xlsx: ExcelFile, ws: Worksheet) -> None:
         )
     }
 
-    df: DataFrame = df[df[df.columns[9]].notna()]
+    df: DataFrame = df[df[df.columns[10]].notna()]
 
     df_striped: DataFrame = df[
         [
             df.columns[0],  # art
             df.columns[5],  # local_art
-            df.columns[9],  # naming
-            df.columns[13],  # price
-            df.columns[14],  # amo
-            df.columns[15],  # brand_discount
+            df.columns[10],  # naming
+            df.columns[14],  # price
+            df.columns[15],  # amo
+            df.columns[16],  # brand_discount
         ]
     ]
     df_striped.columns = [
@@ -120,7 +118,6 @@ async def harv_simash(xlsx: ExcelFile, ws: Worksheet) -> None:
     }
 
     for obj in new_data:
-
         if "номенклатура" in obj["naming"].lower():
             continue
 
@@ -154,15 +151,14 @@ async def harv_simash(xlsx: ExcelFile, ws: Worksheet) -> None:
                 "lt": lt,
                 "seas": seas,
             }
-            sku_validated = SKU_Simash.model_validate(sku_object)
+            sku_validated = SKU_Simoshkevich.model_validate(sku_object)
             validated_data["new_lines"].append(sku_validated.model_dump())
         except ValidationError as e:
             validated_data["trash_lines"].append(
                 {"name": str(obj["naming"]), "val_error": str(e)}
             )
-            # print(f"{str(obj["naming"])}\n{str(e)}\n")
 
-    df_amounts: DataFrame = df[[df.columns[5], df.columns[13], df.columns[14]]]
+    df_amounts: DataFrame = df[[df.columns[5], df.columns[14], df.columns[15]]]
     df_amounts.columns = ["local_art", "price", "amo"]
     df_amounts: DataFrame = df_amounts[df_amounts["amo"].notna()]
     amounts: list[dict[str, Any]] = df_amounts.to_dict(orient="records")
@@ -175,10 +171,11 @@ async def harv_simash(xlsx: ExcelFile, ws: Worksheet) -> None:
                 "price": amo_obj["price"],
                 "amo": amo_obj["amo"],
             }
-            amo_validated = Stock_Simash.model_validate(amo_object)
+            amo_validated = Stock_Simoshkevich.model_validate(amo_object)
             validated_data["amo_data"].append(amo_validated.model_dump())
         except ValidationError as e:
             validated_data["no_amo_arts"].append(
                 {"name": amo_object["local_art"], "val_error": str(e)}
             )
+            print(f"{type(amo_object["price"])} - {amo_object["price"]}: {e}\n\n")
     return validated_data

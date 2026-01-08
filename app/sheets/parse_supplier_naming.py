@@ -17,19 +17,22 @@ def parse(pattern: Pattern[str], text: str) -> str:
 def parse_size(text: str) -> dict[str, str]:
     size_pattern = (
         r"(?:"
-        r"(?:(?P<width>\d{2,3})[/xX*]?)?"
-        r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
+        # r"(?:(?P<width>\d{2,3})[/xX*]?)?"
+        r"(?:(?P<width>\d{1,3}(?:[,.]\d{1,2})?)[/xXХ*]?)?"
+        # r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
+        r"(?:(?P<height>\d{1,2}))?"
         r"\s*(?P<diameter>((?:(?:RZ|Z)?R)|/)\d{2}(?:[,.]\d)?(?:[CС]|LT)?)"
         r") "
     )
     size_pattern2 = (
         r"(?:"
         r"(?P<diameter>(?:(?:RZ|Z)?R)\d{2}(?:[,.]\d)?(?:[CС]|LT)?)"
-        r"\s*(?:(?P<width>\d{2,3})[/xX*]?)?"
-        r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
+        r"\s*(?:(?P<width>\d{2,3})[/xXХ*]?)?"
+        # r"(?:(?P<height>\d{1,2}(?:[,.]\d{1,2})?))?"
+        r"(?:(?P<height>\d{1,2}))?"
         r") "
     )
-    c_pattern = r"(?:\s*(?P<comercial>[CС]) )"
+    c_pattern = r"(?:(?:^|\s)(?P<comercial>[CС]) )"
 
     result = parse(size_pattern, text)
     try:
@@ -38,6 +41,10 @@ def parse_size(text: str) -> dict[str, str]:
     except KeyError:
         if result["full_match"] == "":
             raise ValueError("Size not found in text")
+
+    if result["width"]:
+        width = float(result["width"].replace(",", "."))
+        result["width"] = int(width) if width.is_integer() else width
 
     if result["height"] is None:
         result["height"] = ""
@@ -99,7 +106,7 @@ def parse_indexes(text: str = "", seq: bool = False):
         result = parse_model_and_brand(text=text, seq=True)
     rest = result.get("rest", text)
 
-    indexes_pattern = r"\b(?:(?P<indexes>\d{2,3}(?:/\d{2,3})?\s?(?:[A-ZТ]|ZR)))\b"
+    indexes_pattern = r"\b(?:(?P<indexes>\d{2,3}(?:/\d{2,3})?\s?(?:[A-WY-ZТ]|ZR)))\b"
     indexes_match = parse(indexes_pattern, rest)
     result["indexes"] = indexes_match.get("indexes", "?")
     result["rest"] = indexes_match.get("rest", "")
@@ -112,9 +119,10 @@ def parse_suv(text: str = "", seq: bool = False):
         result = parse_indexes(text=text, seq=True)
     rest = result.get("rest", text)
 
-    suv_pattern = r"(?P<suv> SUV)\b"
+    suv_pattern = r"(?P<suv>(?:^|\s)SUV)\b"
     suv_match = parse(suv_pattern, rest)
-    result["suv"] = suv_match.get("suv", "")
+
+    result["suv"] = " SUV" if suv_match.get("suv", None) else ""
     result["rest"] = suv_match.get("rest", "")
     return result
 
@@ -125,9 +133,10 @@ def parse_xl(text: str = "", seq: bool = False):
         result = parse_suv(text=text, seq=True)
     rest = result.get("rest", text)
 
-    xl_pattern = r"(?P<xl> XL)\b"
+    xl_pattern = r"(?P<xl>(?:^|\s)XL)\b"
     xl_match = parse(xl_pattern, rest)
-    result["xl"] = xl_match.get("xl", "")
+
+    result["xl"] = " XL" if xl_match.get("xl", None) else ""
     result["rest"] = xl_match.get("rest", "")
     return result
 
@@ -141,10 +150,7 @@ def parse_stud(text: str = "", seq: bool = False):
     stud_pattern = r"(?P<stud>(?:^|\s)(ШИПЫ|ШИП|Ш|STUD)\b)"
     stud_match = parse(stud_pattern, rest)
 
-    if stud_match.get("stud", None):
-        result["stud"] = True
-    else:
-        result["stud"] = False
+    result["stud"] = True if stud_match.get("stud", None) else False
     result["rest"] = stud_match.get("rest", "")
     return result
 

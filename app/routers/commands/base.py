@@ -13,7 +13,8 @@ rtr = Router(name=__name__)
 
 
 @rtr.message(AdminCheck(), CommandStart())
-async def start_admin(message: Message):
+async def start_admin(message: Message, state: FSMContext):
+    await state.clear()
     await message.answer(
         f"""
 <b>Привет {message.from_user.full_name}!</b>
@@ -33,7 +34,8 @@ async def start_admin(message: Message):
 
 
 @rtr.message(AdminCheck(), Command("help"))
-async def help_admin(message: Message):
+async def help_admin(message: Message, state: FSMContext):
+    await state.clear()
     print("help command received from admin user:", message.from_user.id)
     suppliers = "\n".join(f"- {supp}" for supp in list(STC)[2:])
     await message.answer(

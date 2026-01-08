@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pandas as pd
-from pandas import ExcelFile
+from pandas import ExcelFile, json_normalize
 from io import BytesIO
 from typing import Any
 
@@ -13,7 +13,8 @@ from app.dicts.json_4tochki_harvester import harv_4tochki
 from app.dicts.xls_olta_harvester import harv_olta
 from app.dicts.xlsx_ShinaTorg_harvester import harv_shina_torg
 from app.dicts.xlsx_BigMachine_harvester import harv_big_machine
-from app.dicts.xlsx_Simash_harvester import harv_simash
+from app.dicts.xlsx_Simoshkevich_harvester import harv_simoshkevich
+from app.dicts.xlsx_Scotchenko_harvester import harv_scotchenko
 
 
 async def file_handler(msg: Message, supplier: str, ws: Worksheet):
@@ -29,7 +30,6 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
         mime = doc.mime_type
 
         data: Any = None
-        print("File loop started")
 
         try:
             if name.endswith(".json") or mime == "application/json":
@@ -38,35 +38,27 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
                         data = json.load(file)
                     except json.JSONDecodeError as e:
                         raise ValueError(f"Invalid JSON: {e}") from e
-                    validated_data = await harv_4tochki(data=data, ws=ws)
+                    df = pd.DataFrame(data["tires"])
+                    # df = json_normalize(data["tires"])
+                    validated_data = await harv_4tochki(data=df, ws=ws)
                 else:
                     await msg.reply(f"<b>.json</b> Поставщик {supplier} не найден")
                     return
 
             elif name.endswith((".xls", ".xlsx")) or "excel" in mime:
-                print("Excel detected")
+                # df = pd.read_excel(file)
+                # data: dict = df.to_dict(orient="records")
+                data: ExcelFile = pd.ExcelFile(file)
                 if supplier == list(STC)[3]:  # olta
-                    #  fix: Тоже возвращать pd.ExcelFile
-                    df = pd.read_excel(file)
-                    data: dict = df.to_dict(orient="records")
-                    validated_data: list[dict[str, Any]] = await harv_olta(
-                        data=data, ws=ws
-                    )
+                    validated_data = await harv_olta(xlsx=data, ws=ws)
                 elif supplier == list(STC)[4]:  # shina_torg
-                    #  fix: Тоже возвращать pd.ExcelFile
-                    df = pd.read_excel(file)
-                    data: dict = df.to_dict(orient="records")
-                    validated_data: list[dict[str, Any]] = await harv_shina_torg(
-                        raw_data=data, ws=ws
-                    )
+                    validated_data = await harv_shina_torg(xlsx=data, ws=ws)
                 elif supplier == list(STC)[5]:  # big_mashina
-                    data: ExcelFile = pd.ExcelFile(file)
                     validated_data = await harv_big_machine(xlsx=data, ws=ws)
-                elif supplier == list(STC)[6]:  # simash
-                    data: ExcelFile = pd.ExcelFile(file)
-                    validated_data = await harv_simash(xlsx=data, ws=ws)
-                    print(validated_data["i_data"])
-                    print(len(validated_data["amo_data"]))
+                elif supplier == list(STC)[6]:  # simoshkevich
+                    validated_data = await harv_simoshkevich(xlsx=data, ws=ws)
+                # elif supplier == list(STC)[7]:  # scotchenko
+                #     validated_data = await harv_scotchenko(xlsx=data, ws=ws)
                 else:
                     await msg.reply(f"<b>excel</b> Поставщик {supplier} не найден")
                     raise ValueError(f"<b>excel</b> Поставщик {supplier} не найден")

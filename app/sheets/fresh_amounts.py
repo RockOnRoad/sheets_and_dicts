@@ -38,102 +38,177 @@ async def insert_amounts(data, ws: Worksheet, supp: str):
     """****
 
     :param data: `list[list[str, int | None]]` - grid of amounts and prices (correctly sorted)
-    :param ws: 'gspread.Worksheet' - Worksheet object to work with.
-    :param supp: 'str' - name of supplier. Used to reference all the right columns
+    :param ws: `gspread.Worksheet` - Worksheet object to work with.
+    :param supp: `str` - name of supplier. Used to reference all the right columns
     """
-
     today = datetime.today().strftime("%d.%m")
 
+    # shared 2-column suppliers
+    two_col = (list(STC)[3], list(STC)[4], list(STC)[5], list(STC)[6])
+
     if supp == list(STC)[2]:  # 4tochki
-        headers: tuple = (
+        headers = (
             [f"Стоимость\n{today}"],
             [f"solonkl\n{today}"],
             [f"kryarsk2\n{today}"],
         )
-        col: int = STC[supp]["Стоимость\n"]["n"]
-        fr: str = STC[supp]["Стоимость\n"]["l"]
-        to: str = STC[supp]["kryarsk2\n"]["l"]
-    elif supp == list(STC)[3]:  # olta
-        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
-        col: int = STC[supp]["Стоимость\n"]["n"]
-        fr: str = STC[supp]["Стоимость\n"]["l"]
-        to: str = STC[supp]["Остаток\n"]["l"]
-    elif supp == list(STC)[4]:  # shina_torg
-        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
-        col: int = STC[supp]["Стоимость\n"]["n"]
-        fr: str = STC[supp]["Стоимость\n"]["l"]
-        to: str = STC[supp]["Остаток\n"]["l"]
-    elif supp == list(STC)[5]:  # big_machine
-        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
-        col: int = STC[supp]["Стоимость\n"]["n"]
-        fr: str = STC[supp]["Стоимость\n"]["l"]
-        to: str = STC[supp]["Остаток\n"]["l"]
-    elif supp == list(STC)[6]:  # simash
-        headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
-        col: int = STC[supp]["Стоимость\n"]["n"]
-        fr: str = STC[supp]["Стоимость\n"]["l"]
-        to: str = STC[supp]["Остаток\n"]["l"]
+        start_key = "Стоимость\n"
+        end_key = "kryarsk2\n"
 
-    r: int = float(random.randint(0, 30))
-    g: int = float(random.randint(0, 15))
-    b: int = float(random.randint(0, 30))
+    elif supp in two_col:
+        headers = (
+            [f"Стоимость\n{today}"],
+            [f"Остаток\n{today}"],
+        )
+        start_key = "Стоимость\n"
+        end_key = "Остаток\n"
+
+    else:
+        raise ValueError(f"Unknown supplier: {supp}")
+
+    col = STC[supp][start_key]["n"]
+    fr = STC[supp][start_key]["l"]
+    to = STC[supp][end_key]["l"]
+
+    # random color for the "I tried" effect
+    r, g, b = (float(random.randint(0, x)) for x in (30, 15, 30))
 
     ws.insert_cols(headers, col=col)
     ws.format(f"{fr}3:{to}", {"backgroundColor": {"red": r, "green": g, "blue": b}})
     ws.update(data, f"{fr}3")
 
 
+# async def insert_amounts(data, ws: Worksheet, supp: str):
+#     """****
+
+#     :param data: `list[list[str, int | None]]` - grid of amounts and prices (correctly sorted)
+#     :param ws: 'gspread.Worksheet' - Worksheet object to work with.
+#     :param supp: 'str' - name of supplier. Used to reference all the right columns
+#     """
+
+#     today = datetime.today().strftime("%d.%m")
+
+#     if supp == list(STC)[2]:  # 4tochki
+#         headers: tuple = (
+#             [f"Стоимость\n{today}"],
+#             [f"solonkl\n{today}"],
+#             [f"kryarsk2\n{today}"],
+#         )
+#         col: int = STC[supp]["Стоимость\n"]["n"]
+#         fr: str = STC[supp]["Стоимость\n"]["l"]
+#         to: str = STC[supp]["kryarsk2\n"]["l"]
+#     elif supp == list(STC)[3]:  # olta
+#         headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+#         col: int = STC[supp]["Стоимость\n"]["n"]
+#         fr: str = STC[supp]["Стоимость\n"]["l"]
+#         to: str = STC[supp]["Остаток\n"]["l"]
+#     elif supp == list(STC)[4]:  # shina_torg
+#         headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+#         col: int = STC[supp]["Стоимость\n"]["n"]
+#         fr: str = STC[supp]["Стоимость\n"]["l"]
+#         to: str = STC[supp]["Остаток\n"]["l"]
+#     elif supp == list(STC)[5]:  # big_machine
+#         headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+#         col: int = STC[supp]["Стоимость\n"]["n"]
+#         fr: str = STC[supp]["Стоимость\n"]["l"]
+#         to: str = STC[supp]["Остаток\n"]["l"]
+#     elif supp == list(STC)[6]:  # simash
+#         headers: tuple = ([f"Стоимость\n{today}"], [f"Остаток\n{today}"])
+#         col: int = STC[supp]["Стоимость\n"]["n"]
+#         fr: str = STC[supp]["Стоимость\n"]["l"]
+#         to: str = STC[supp]["Остаток\n"]["l"]
+
+#     r: int = float(random.randint(0, 30))
+#     g: int = float(random.randint(0, 15))
+#     b: int = float(random.randint(0, 30))
+
+#     ws.insert_cols(headers, col=col)
+#     ws.format(f"{fr}3:{to}", {"backgroundColor": {"red": r, "green": g, "blue": b}})
+#     ws.update(data, f"{fr}3")
+
+
 async def prepare_amounts(
     keys: list[str], key: str, data: list[dict[str, Any]], supp: str
 ):
-    # wanted_keys: "art", "price", "amo_solonkl", "amo_kryarsk2"
+
     amounts: list[list[str, int | None]] = []
 
-    if supp == list(STC)[2]:  # 4tochki
-        for pk in keys:
-            match = next((line for line in data if line[key] == pk), None)
-            if match:
-                amounts.append(
-                    [
-                        match.get("price"),
-                        match.get("amo_solonkl", 0),
-                        match.get("amo_kryarsk2", 0),
-                    ]
-                )
-            else:
-                amounts.append([None, 0, 0])
-    elif supp == list(STC)[3]:  # olta
-        for pk in keys:
-            match = next((line for line in data if line[key] == pk), None)
-            if match:
-                amounts.append([match.get("price", None), match.get("amo", 0)])
-            else:
-                amounts.append([None, 0])
+    # supplier-specific field layouts
+    layout = {
+        list(STC)[2]: ("price", "amo_solonkl", "amo_kryarsk2"),  # 4tochki
+        list(STC)[3]: ("price", "amo"),  # olta
+        list(STC)[4]: ("price", "amo"),  # shina_torg
+        list(STC)[5]: ("price", "amo"),  # big_machine
+        list(STC)[6]: ("price", "amo"),  # simash
+    }
 
-    elif supp == list(STC)[4]:  # shina_torg
-        for pk in keys:
-            match = next((line for line in data if line[key] == pk), None)
-            if match:
-                amounts.append([match.get("price", None), match.get("amo", 0)])
-            else:
-                amounts.append([None, 0])
+    amo_columns = layout.get(supp)
 
-    elif supp == list(STC)[5]:  # big_machine
-        for pk in keys:
-            match = next((line for line in data if line[key] == pk), None)
-            if match:
-                amounts.append([match.get("price", None), match.get("amo", 0)])
-            else:
-                amounts.append([None, 0])
+    for pk in keys:
+        if match := next((line for line in data if line[key] == pk), None):
+            amounts.append(
+                [match.get(f, 0 if f.startswith("amo") else None) for f in amo_columns]
+            )
+        else:
+            # fallback: [None, 0, 0...] depending on number of amo_columns
+            default = [None if f == "price" else 0 for f in amo_columns]
+            amounts.append(default)
 
-    elif supp == list(STC)[6]:  # simash
-        for pk in keys:
-            match = next((line for line in data if line[key] == pk), None)
-            if match:
-                amounts.append([match.get("price", None), match.get("amo", 0)])
-            else:
-                amounts.append([None, 0])
     return amounts
+
+    # # wanted_keys: "art", "price", "amo_solonkl", "amo_kryarsk2"
+    # amounts: list[list[str, int | None]] = []
+
+    # # for pk in keys:
+    # #     match := next((line for line in data if line[key] == pk), None)
+
+    # #  Переделать в функцию
+    # if supp == list(STC)[2]:  # 4tochki
+    #     for pk in keys:
+    #         match = next((line for line in data if line[key] == pk), None)
+    #         if match:
+    #             amounts.append(
+    #                 [
+    #                     match.get("price"),
+    #                     match.get("amo_solonkl", 0),
+    #                     match.get("amo_kryarsk2", 0),
+    #                 ]
+    #             )
+    #         else:
+    #             amounts.append([None, 0, 0])
+    # elif supp == list(STC)[3]:  # olta
+    #     for pk in keys:
+    #         #  Применить walrus operator
+    #         match = next((line for line in data if line[key] == pk), None)
+    #         if match:
+    #             amounts.append([match.get("price", None), match.get("amo", 0)])
+    #         else:
+    #             amounts.append([None, 0])
+
+    # elif supp == list(STC)[4]:  # shina_torg
+    #     for pk in keys:
+    #         match = next((line for line in data if line[key] == pk), None)
+    #         if match:
+    #             amounts.append([match.get("price", None), match.get("amo", 0)])
+    #         else:
+    #             amounts.append([None, 0])
+
+    # elif supp == list(STC)[5]:  # big_machine
+    #     for pk in keys:
+    #         match = next((line for line in data if line[key] == pk), None)
+    #         if match:
+    #             amounts.append([match.get("price", None), match.get("amo", 0)])
+    #         else:
+    #             amounts.append([None, 0])
+
+    # elif supp == list(STC)[6]:  # simash
+    #     for pk in keys:
+    #         match = next((line for line in data if line[key] == pk), None)
+    #         if match:
+    #             amounts.append([match.get("price", None), match.get("amo", 0)])
+    #         else:
+    #             amounts.append([None, 0])
+    # return amounts
 
 
 async def add_fresh_amounts(stock: list[dict[str, Any]], ws: Worksheet, supp: str):
@@ -146,9 +221,7 @@ async def add_fresh_amounts(stock: list[dict[str, Any]], ws: Worksheet, supp: st
     :param supp: `str` - Name of supplier for correct dependancies
     """
 
-    if supp == list(STC)[3]:  # olta:
-        key: str = "code_w_prefix"
-    elif supp == list(STC)[6]:  # simash:
+    if supp in [list(STC)[3], list(STC)[6]]:  # olta; simoshkevich
         key: str = "local_art"
     else:
         key: str = "art"
@@ -156,7 +229,7 @@ async def add_fresh_amounts(stock: list[dict[str, Any]], ws: Worksheet, supp: st
     col: str = f"{_l}3:{_l}"
 
     pks: list[str] = [item[0] if item else "" for item in ws.get(col)]
-    # 4tochki - arts; olta - code_w_prefix; simash - local_arts
+    # olta, simoshkevich - local_arts; others - arts
 
     grid_of_amos: list[str] = await prepare_amounts(
         keys=pks, key=key, data=stock, supp=supp

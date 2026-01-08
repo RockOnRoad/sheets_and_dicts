@@ -33,7 +33,7 @@ async def prepare_table_data(data: list[dict[str, Any]]) -> dict[str, list[Any]]
             line["seas"],
             line["stud"],
             line["supp"],
-            line.get("code_w_prefix", line.get("local_art", "")),
+            line.get("local_art", ""),
             line.get("text", ""),
         ]
         visible_row = [line["name"], line["full_size"], line.get("age", "")]
