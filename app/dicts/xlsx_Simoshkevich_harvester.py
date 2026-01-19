@@ -177,5 +177,5 @@ async def harv_simoshkevich(xlsx: ExcelFile, ws: Worksheet) -> None:
             validated_data["no_amo_arts"].append(
                 {"name": amo_object["local_art"], "val_error": str(e)}
             )
-            print(f"{type(amo_object["price"])} - {amo_object["price"]}: {e}\n\n")
+            # print(f"{type(amo_object["price"])} - {amo_object["price"]}: {e}\n\n")
     return validated_data

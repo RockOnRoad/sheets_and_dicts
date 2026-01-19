@@ -1,6 +1,9 @@
 from typing import Any
+from aiogram.types import Message, CallbackQuery
 
 from gspread import Worksheet
+from gspread.exceptions import APIError
+from app.services import MessageAnimation
 
 from . import BASE_LAYOUT, STC
 
@@ -70,7 +73,9 @@ async def sort_stock(data: list[dict[str, Any]]):
     return sorted_data
 
 
-async def add_new_items(stock: list[dict[str, Any]], ws: Worksheet, supp: str) -> list:
+async def add_new_items(
+    upd: Message | CallbackQuery, stock: list[dict[str, Any]], ws: Worksheet, supp: str
+) -> list:
     """**Adds new stock items to the supplier worksheet.**
 
     :param stock: `list[dict[str, Any]]` - List of stock objects.
@@ -84,12 +89,41 @@ async def add_new_items(stock: list[dict[str, Any]], ws: Worksheet, supp: str) -
         sorted_stock: list[dict[str, Any]] = await sort_stock(stock)
         prepared_stock: dict[str, list[Any]] = await prepare_table_data(sorted_stock)
 
+        msg_animation_1 = MessageAnimation(
+            message_or_call=upd,
+            base_text=f"<b>{supp}</b> запись - создание пустых строк",
+        )
+        await msg_animation_1.start()
+
+        #  Добавляем достаточное кол-во строк чтобы вместить новые SKU
         ws.add_rows(len(prepared_stock["hidden"]) + 1)
 
-        number_last_row: int = len(ws.get("A3:A")) + 4
+        await msg_animation_1.stop()
+
+        msg_animation_2 = MessageAnimation(
+            message_or_call=upd,
+            base_text=f"<b>{supp}</b> чтение - номер последней заполненной строки",
+        )
+        await msg_animation_2.start()
+
+        try:
+            number_last_row = len(ws.col_values(1)) + 2
+        except APIError as e:
+            print(
+                f"Не получилось получить номер последней строки в таблице {supp}\nОшибка: {e}"
+            )
+            raise e
+
+        await msg_animation_2.stop()
 
         _l_art: str = BASE_LAYOUT["art"]["l"]
         _l_name: str = STC[supp]["name"]["l"]
+
+        msg_animation_3 = MessageAnimation(
+            message_or_call=upd,
+            base_text=f"<b>{supp}</b> запись - новых позиций",
+        )
+        await msg_animation_3.start()
 
         ws.batch_update(
             data=[
@@ -103,4 +137,8 @@ async def add_new_items(stock: list[dict[str, Any]], ws: Worksheet, supp: str) -
                 },
             ],
         )
+
+        await msg_animation_3.stop()
+
+        print("Batch update complete")
     return prepared_stock["hidden"]

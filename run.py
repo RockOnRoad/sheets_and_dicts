@@ -1,16 +1,12 @@
 import logging
-import os
 import sys
-
 import asyncio
 
-from aiogram import Bot, Dispatcher
-
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
+from aiogram import Dispatcher
 from aiogram.types import BotCommand
 from dotenv import load_dotenv
 
+from app.config import bot
 from app.routers import router as main_router
 
 load_dotenv()
@@ -25,10 +21,6 @@ COMMANDS = [
 async def main():
     dp = Dispatcher()
     dp.include_router(main_router)
-    bot = Bot(
-        token=os.getenv("TOKEN"),
-        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
-    )
     await bot.set_my_commands(commands=COMMANDS)
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)

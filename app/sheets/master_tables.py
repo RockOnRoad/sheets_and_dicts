@@ -1,15 +1,22 @@
+import asyncio
+
 from datetime import datetime
 from typing import Any
 
+from aiogram.types import Message, CallbackQuery
 from gspread import Worksheet
 from gspread.utils import ValueRenderOption
+from pandas import notna
 
 from ..dicts import SeasonType
 from ..sheets.fresh_stock import sort_stock
 from ..sheets import STC, BASE_LAYOUT
+from app.services import MessageAnimation
 
 
-async def fix_master_formulas(ws: Worksheet, table: str, supp: str):
+async def fix_master_formulas(
+    upd: Message | CallbackQuery, ws: Worksheet, table: str, supp: str
+):
     """**Updates Headers and repairs Formulas that load amounts from suppliers tables to master tables**
 
     :param ws: `gspread.Worksheet` Sheet, we work with
@@ -81,6 +88,12 @@ async def fix_master_formulas(ws: Worksheet, table: str, supp: str):
         col_from = STC[table][master_table_key_from]["l"]
         col_to = STC[table][master_table_key_to]["l"]
 
+        msg_animation = MessageAnimation(
+            message_or_call=upd,
+            base_text=f"<b>{table}</b> запись - обновление формул и заголовков",
+        )
+        await msg_animation.start()
+
         ws.update(
             values=[
                 headers,
@@ -89,6 +102,8 @@ async def fix_master_formulas(ws: Worksheet, table: str, supp: str):
             range_name=f"{col_from}1:{col_to}2",
             value_input_option="USER_ENTERED",
         )
+
+        await msg_animation.stop()
 
     if supp in list(STC)[2:]:
         if supp == list(STC)[2]:  # 4tochki
@@ -104,7 +119,11 @@ async def fix_master_formulas(ws: Worksheet, table: str, supp: str):
 #  Переделать чтобы передавать только артикулы, без лишних данных
 #  И убрать nan артикулы
 async def common_tables_add_arts(
-    n_data: list[dict[str, Any]], ws: Worksheet, table: str, supp: str
+    upd: Message | CallbackQuery,
+    n_data: list[dict[str, Any]],
+    ws: Worksheet,
+    table: str,
+    supp: str,
 ):
 
     new_arts: list[str] = []
@@ -124,7 +143,7 @@ async def common_tables_add_arts(
         elif table == list(STC)[1]:
             seas = (SeasonType.SUMMER,)
         for line in new_lines:
-            if line["lt"] == "l" and line["seas"] in seas:
+            if line["lt"] == "l" and line["seas"] in seas and notna(line["art"]):
                 filtered_lines.append(line)
 
         if filtered_lines:
@@ -134,11 +153,56 @@ async def common_tables_add_arts(
             for line in sorted_stock:
                 new_arts.append([line["art"]])
 
+            msg_animation_1 = MessageAnimation(
+                message_or_call=upd,
+                base_text=f"<b>{table}</b> запись - создание пустых строк",
+            )
+            await msg_animation_1.start()
+
             ws.add_rows(len(new_arts) + 1)
 
+            await msg_animation_1.stop()
+
             _l: str = BASE_LAYOUT["art"]["l"]
+
+            msg_animation_2 = MessageAnimation(
+                message_or_call=upd,
+                base_text=f"<b>{table}</b> чтение - номер последней заполненной строки",
+            )
+            await msg_animation_2.start()
+
             number_last_row: int = len(ws.get("A3:A")) + 4
+            print(number_last_row)
+            number_last_row_alt = len(ws.col_values(1)) + 2
+            print(number_last_row_alt)
+
+            await msg_animation_2.stop()
+
+            msg_animation_3 = MessageAnimation(
+                message_or_call=upd,
+                base_text=f"<b>{table}</b> запись - новых позиций",
+            )
+            await msg_animation_3.start()
 
             ws.update(new_arts, f"{_l}{number_last_row}")
+
+            await msg_animation_3.stop()
+
+            new_arts_amo: int = len(new_arts)
+
+            msg_animation_4 = MessageAnimation(
+                message_or_call=upd,
+                base_text=f"<b>{table}</b> запись - количества и цены",
+            )
+            await msg_animation_4.start()
+
+            #  19/11/2025
+            _l: str = STC[table]["Последнее\nобновление"]["l"]
+            ws.update(
+                [[datetime.today().strftime("%d/%m/%Y")]] * new_arts_amo,
+                f"{_l}{number_last_row}",
+            )
+
+            await msg_animation_4.stop()
 
     return new_arts

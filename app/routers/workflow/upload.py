@@ -113,10 +113,10 @@ async def file_sent_no_context(message: Message, state: FSMContext):
 async def file_sent_context(
     call: CallbackQuery, callback_data: Supplier_Msg_Add, state: FSMContext
 ):
-    msg_w_file: Message = (await state.get_data())["msg_w_file"]
-    await state.clear()
-
     supplier: str = callback_data.name
     await call.answer(f"Вы выбрали {callback_data.name}")
+
+    msg_w_file: Message = (await state.get_data())["msg_w_file"]
+    await state.clear()
 
     await squeeze(upd=call, msg_w_file=msg_w_file, supplier=supplier)

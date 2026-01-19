@@ -68,10 +68,8 @@ async def add_stock(message: Message, state: FSMContext) -> None:
     buttons: dict[str, str] = {}
     #  Берём названия поставщиков (supp: str) из STC
     for supp in list(STC)[2:]:
-        #  Создаём экземпляр класса Supplier для каждого поставщика
-        supp_cbq = Supplier_Msg_Add(name=supp)
         #  мы используем метод `pack()` для key и `name` для value
-        buttons[supp_cbq.pack()] = supp
+        buttons[Supplier_Msg_Add(name=supp).pack()] = supp
     #  inline_buttons обрабатывает данные в формате (buttons = {callback_data: button_text})
     i_kb = await inline_buttons(buttons=buttons, columns=2)
     await message.answer("<b>Чей прайс обновляем?</b>", reply_markup=i_kb)

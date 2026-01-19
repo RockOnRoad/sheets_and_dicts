@@ -1,5 +1,8 @@
 import os
 import gspread
+from gspread.worksheet import Worksheet
+from pathlib import Path
+
 from copy import deepcopy
 
 from dotenv import load_dotenv
@@ -11,14 +14,19 @@ load_dotenv()
 #  You’d have to re-import/reload the module or rebuild the worksheets dict if you need fresh ones.
 #  If that’s a concern, just call _sh.worksheets() again when you need an update.
 
-_gc = gspread.service_account(filename="app/sheets/credantials.json")
-_sh = _gc.open_by_key(os.getenv("SHEET_ID"))
-worksheets = {ws.title: ws for ws in _sh.worksheets()}
+google_creds = Path(__file__).parent / "credantials.json"
+
+_gc = gspread.service_account(filename=google_creds)
+sh = _gc.open_by_key(os.getenv("SHEET_ID"))
+#  Dictionary of worksheets for quick access {'Sheet1': <Worksheet 'Sheet1' ...>},
+# worksheets = {ws.title: ws for ws in _sh.worksheets()}
+
+# sheets_timeout = 20  # seconds
 
 
-async def get_ws(name: str):
+async def get_ws(name: str) -> Worksheet:
     """Fetch worksheet by name, quick lookup (no extra API call)."""
-    return worksheets[name]
+    return sh.worksheet(name)
 
 
 BASE_LAYOUT: dict[str, dict[str, str | int]] = {

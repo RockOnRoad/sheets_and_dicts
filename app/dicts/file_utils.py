@@ -1,4 +1,3 @@
-import asyncio
 import json
 import pandas as pd
 from pandas import ExcelFile, json_normalize
@@ -14,7 +13,9 @@ from app.dicts.xls_olta_harvester import harv_olta
 from app.dicts.xlsx_ShinaTorg_harvester import harv_shina_torg
 from app.dicts.xlsx_BigMachine_harvester import harv_big_machine
 from app.dicts.xlsx_Simoshkevich_harvester import harv_simoshkevich
-from app.dicts.xlsx_Scotchenko_harvester import harv_scotchenko
+from app.services import MessageAnimation
+
+# from app.dicts.xlsx_Scotchenko_harvester import harv_scotchenko
 
 
 async def file_handler(msg: Message, supplier: str, ws: Worksheet):
@@ -46,6 +47,13 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
                     return
 
             elif name.endswith((".xls", ".xlsx")) or "excel" in mime:
+
+                msg_animation = MessageAnimation(
+                    message_or_call=msg,
+                    base_text=f"<b>{supplier}</b> чтение - существующих артикулов",
+                )
+                await msg_animation.start()
+
                 # df = pd.read_excel(file)
                 # data: dict = df.to_dict(orient="records")
                 data: ExcelFile = pd.ExcelFile(file)
@@ -62,6 +70,9 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
                 else:
                     await msg.reply(f"<b>excel</b> Поставщик {supplier} не найден")
                     raise ValueError(f"<b>excel</b> Поставщик {supplier} не найден")
+
+                await msg_animation.stop()
+
             else:
                 await msg.reply("Файл не поддерживается (нужен Excel или JSON).")
                 return

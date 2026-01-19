@@ -2,7 +2,7 @@ from typing import Any
 
 from aiogram.types import Message, CallbackQuery
 
-from ..sheets import _sh, get_ws, STC
+from ..sheets import get_ws, STC
 from ..sheets.fresh_stock import add_new_items
 from ..sheets.fresh_amounts import add_fresh_amounts
 from ..sheets.master_tables import common_tables_add_arts, fix_master_formulas
@@ -19,7 +19,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
     :param msg_w_file: Message containing the file.
     :param supplier: name of the supplier, which is also the name of the table.
     """
-    _sh.worksheets()  # to keep the connection alive
+    # _sh.worksheets()  # to keep the connection alive
 
     msg_1: str = f"✔︎  Файл поставщика (<code>{supplier}</code>) получен.\n"
     msg_2: str = "⇢  Проверка"
@@ -68,7 +68,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
 
         # Добавляем позиции в табл. поставщика
         new_lines = await add_new_items(
-            stock=validated_stock["new_lines"], ws=ws, supp=supplier
+            upd=upd, stock=validated_stock["new_lines"], ws=ws, supp=supplier
         )
 
         msg_9: str = (
@@ -91,7 +91,9 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
         )
 
     #  Обновляем остатки в табл. поставщика
-    await add_fresh_amounts(stock=validated_stock["amo_data"], ws=ws, supp=supplier)
+    await add_fresh_amounts(
+        upd=upd, stock=validated_stock["amo_data"], ws=ws, supp=supplier
+    )
 
     msg_11: str = f"✔︎  <b>Остатки обновлены</b> в таблице <b>{supplier}</b>.\n"
     mes = mes + msg_11
@@ -116,6 +118,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
 
             #  Добавляем новые артикулы на 2 главных страницы
             new_arts: list[str] = await common_tables_add_arts(
+                upd=upd,
                 n_data=validated_stock["new_lines"],
                 ws=ws,
                 table=table,
@@ -141,7 +144,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
                     message_id=msg_id,
                 )
 
-        await fix_master_formulas(ws=ws, table=table, supp=supplier)
+        await fix_master_formulas(upd=upd, ws=ws, table=table, supp=supplier)
 
     if validated_stock["new_lines"] == []:
         msg_14: str = "✔︎  В главных таблицах нет недостоющих артикулов"

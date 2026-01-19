@@ -81,6 +81,7 @@ async def harv_olta(xlsx: ExcelFile, ws: Worksheet):
     df.columns = ["art", "naming", "age", "local_art", "amo", "price"]
 
     _l: str = STC["olta"]["local_art"]["l"]
+
     ex_local_arts: list[str] = {
         item[0] if item else ""
         for item in ws.get(

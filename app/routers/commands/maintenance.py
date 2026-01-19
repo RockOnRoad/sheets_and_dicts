@@ -1,3 +1,4 @@
+import asyncio
 from aiogram import Router, F
 from aiogram.filters.command import Command
 from aiogram.filters.callback_data import CallbackData
@@ -15,6 +16,8 @@ from app.dicts.matches_edit import (
     remove_name_from_matches,
 )
 from app.kbds import inline_buttons
+from app.services.message_animation import MessageAnimation
+from app.sheets import sh
 
 
 rtr = Router(name=__name__)
@@ -57,7 +60,7 @@ async def list_brands_hand(message):
 #  -------------  Models Editing  -------------  #
 
 
-# #  Read all the matches
+#  Read all the matches
 @rtr.message(AdminCheck(), Command("matches"))
 async def list_models_hand(message):
     models = json_to_dict("model_matches.json")
@@ -75,7 +78,7 @@ async def list_models_hand(message):
     await message.answer(f"Список моделей совпадений:\n{text}\n\n")
 
 
-#  ✅
+#
 @rtr.message(AdminCheck(), Command("models"))
 async def model_matches_hand(message: Message, state: FSMContext):
 
@@ -92,7 +95,7 @@ async def model_matches_hand(message: Message, state: FSMContext):
     )
 
 
-#  ✅
+#
 @rtr.message(NamesEditingStates.match_brand)
 async def add_model_match_brand_hand(message: Message, state: FSMContext, prefix=""):
 
@@ -144,7 +147,7 @@ async def add_model_match_brand_hand(message: Message, state: FSMContext, prefix
         )
 
 
-#  ✅
+#
 @rtr.callback_query(
     AdminCheck(),
     EditModels.filter(F.button == "add_brand"),
@@ -161,7 +164,7 @@ async def add_model_match_new_brand_hand(call: CallbackQuery, state: FSMContext)
     await add_model_match_brand_hand(call.message, state, prefix=prefix)
 
 
-#  ✅
+#
 @rtr.callback_query(
     AdminCheck(),
     EditModels.filter(F.button == "add_match"),
@@ -178,7 +181,7 @@ async def add_model_match_new_match_hand(call: CallbackQuery, state: FSMContext)
     )
 
 
-#  ✅
+#
 @rtr.message(AdminCheck(), NamesEditingStates.add_match)
 async def add_model_match_hand(message: Message, state: FSMContext):
     match_input = message.text.strip()
@@ -198,7 +201,7 @@ async def add_model_match_hand(message: Message, state: FSMContext):
     await add_model_match_brand_hand(message, state)
 
 
-#  ✅
+#
 @rtr.callback_query(
     AdminCheck(),
     EditModels.filter(F.button == "rm_match"),
@@ -213,7 +216,7 @@ async def remove_model_match_button_hand(call: CallbackQuery, state: FSMContext)
     )
 
 
-#  ✅
+#
 @rtr.message(AdminCheck(), NamesEditingStates.rm_match)
 async def remove_model_match_hand(message: Message, state: FSMContext):
     index_input = message.text.strip()
@@ -244,7 +247,7 @@ async def remove_model_match_hand(message: Message, state: FSMContext):
             break
 
 
-#  ✅
+#
 @rtr.callback_query(
     AdminCheck(),
     EditModels.filter(F.button == "confirm_rm"),
@@ -266,3 +269,69 @@ async def confirm_remove_model_match_hand(call: CallbackQuery, state: FSMContext
 #  Добавить совпадение для бренда
 
 #  Отредактировать все совпадения внутри бренда
+
+
+#  -------------  Google Sheets  -------------  #
+
+
+@rtr.message(AdminCheck(), Command("sheets"))
+async def list_sheets_hand(message):
+    #  Вывести список доступных таблиц
+    # print(f"Available sheets: {_sh.worksheets()}")
+    olta = sh.worksheet("olta")
+    arts = olta.col_values(1)
+    number_last_row: int = len(olta.get("A3:A")) + 4
+    for a in arts:
+        print(a)
+
+    print(len(arts))
+    print(f"Last row number: {number_last_row}")
+
+
+#  -------------  Test Message Animation  -------------  #
+
+
+class MsgAnimation(CallbackData, prefix="test_msg_anim"):
+    """Assembles inline keyboard of suppliers after user **types /add**"""
+
+    name: str
+
+
+@rtr.message(AdminCheck(), Command("animation"))
+async def test_animation_hand(message: Message):
+
+    mes = await message.answer("Это сообщение до анимации.")
+
+    anim = MessageAnimation(
+        message_or_call=message,
+        base_text="Загружаю данные",
+    )
+    await anim.start()
+    #  Симулируем длительную операцию
+    await asyncio.sleep(15)
+    await anim.stop()
+
+    buttons = {
+        MsgAnimation(name="next").pack(): "Прочитать",
+    }
+    kbd = await inline_buttons(buttons=buttons, columns=1)
+
+    await mes.edit_text("Анимация завершена.", reply_markup=kbd)
+
+
+@rtr.callback_query(AdminCheck(), MsgAnimation.filter(F.name == "next"))
+async def test_animation_next_hand(call: CallbackQuery):
+    await call.answer("Нажата кнопка OK после анимации.")
+
+    mes = await call.message.answer("Это сообщение до анимации.")
+
+    anim = MessageAnimation(
+        message_or_call=call,
+        base_text="Читаю данные",
+    )
+    await anim.start()
+    #  Симулируем длительную операцию
+    await asyncio.sleep(15)
+    await anim.stop()
+
+    await mes.edit_text("Анимация завершена.")
