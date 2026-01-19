@@ -1,3 +1,5 @@
+import asyncio
+import random
 from typing import Any
 from aiogram.types import Message, CallbackQuery
 
@@ -6,6 +8,9 @@ from gspread.exceptions import APIError
 from app.services import MessageAnimation
 
 from . import BASE_LAYOUT, STC
+
+MAX_RETRIES = 8
+BASE_DELAY = 1  # seconds
 
 
 async def prepare_table_data(data: list[dict[str, Any]]) -> dict[str, list[Any]]:
@@ -106,13 +111,29 @@ async def add_new_items(
         )
         await msg_animation_2.start()
 
-        try:
-            number_last_row = len(ws.col_values(1)) + 2
-        except APIError as e:
-            print(
-                f"Не получилось получить номер последней строки в таблице {supp}\nОшибка: {e}"
-            )
-            raise e
+        # try:
+        # number_last_row = len(ws.col_values(1)) + 2
+
+        for attempt in range(MAX_RETRIES):
+            try:
+                number_last_row = len(ws.col_values(1)) + 2
+                break
+
+            except APIError:
+                # If it's the last attempt – rethrow
+                if attempt == MAX_RETRIES - 1:
+                    raise
+
+                # Exponential backoff + jitter
+                delay = BASE_DELAY * (2**attempt)
+                delay += random.uniform(0, 0.5)
+
+                await asyncio.sleep(delay)
+        # except APIError as e:
+        #     print(
+        #         f"Не получилось получить номер последней строки в таблице {supp}\nОшибка: {e}"
+        #     )
+        #     raise e
 
         await msg_animation_2.stop()
 
