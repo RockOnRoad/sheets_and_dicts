@@ -27,7 +27,10 @@ async def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="\n--- %(levelname)s: %(asctime)s - %(name)s ---\n%(message)s",
+    )
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

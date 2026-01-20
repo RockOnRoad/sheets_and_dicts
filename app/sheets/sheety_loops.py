@@ -1,10 +1,14 @@
 import asyncio
+import logging
 import random
 from gspread import Worksheet
 from gspread.exceptions import APIError
 from aiogram.types import Message, CallbackQuery
 
 from app.services.message_animation import MessageAnimation
+
+
+logger = logging.getLogger(__name__)
 
 
 #  Этот слой нужен в том случае, когда декоратор принимает аргументы
@@ -26,8 +30,10 @@ def retryable_and_animated(
 
             for attempt in range(retries):
                 try:
+                    print(f"Attempt {attempt + 1} for function {fn.__name__}")
                     return fn(*args, **kwargs)
                 except APIError:
+                    logger.warning("APIError encountered. Retrying...")
                     if attempt == retries - 1:
                         raise
                     asyncio.sleep(base_delay * (2**attempt) + random.random())
