@@ -102,7 +102,7 @@ async def add_new_items(
         )(ws.add_rows)(len(prepared_stock["hidden"]) + 1)
 
         #  Узнаем номер последней заполненной строки
-        get_last_row = await retryable_and_animated(
+        get_last_row = retryable_and_animated(
             upd=upd,
             base_text=f"<b>{supp}</b> чтение - номер последней заполненной строки",
         )(lambda: len(ws.col_values(1)) + 2)

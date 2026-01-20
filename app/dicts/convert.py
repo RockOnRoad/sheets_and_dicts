@@ -22,7 +22,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
     # _sh.worksheets()  # to keep the connection alive
 
     msg_1: str = f"✔︎  Файл поставщика (<code>{supplier}</code>) получен.\n"
-    msg_2: str = "⇢  Проверка"
+    msg_2: str = "⇢  Скачивание файла"
 
     if isinstance(upd, Message):
         msg_id: int = upd.message_id + 1
