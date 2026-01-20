@@ -7,7 +7,6 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import Message, CallbackQuery
 
 
-from app.routers.router_objects import AdminCheck
 from app.dicts.names import BRANDS, MODELS
 from app.dicts.matches_edit import (
     json_to_dict,
@@ -16,6 +15,7 @@ from app.dicts.matches_edit import (
     remove_name_from_matches,
 )
 from app.kbds import inline_buttons
+from app.routers.router_objects import AdminCheck
 from app.services.message_animation import MessageAnimation
 from app.sheets import sh
 
@@ -292,7 +292,7 @@ async def list_sheets_hand(message):
 
 
 class MsgAnimation(CallbackData, prefix="test_msg_anim"):
-    """Assembles inline keyboard of suppliers after user **types /add**"""
+    """CallbackData для тестовой анимации сообщений."""
 
     name: str
 

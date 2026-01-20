@@ -7,6 +7,8 @@ from gspread import Worksheet
 from gspread.exceptions import APIError
 from app.services import MessageAnimation
 
+from app.sheets.sheety_loops import retryable_and_animated
+
 from . import BASE_LAYOUT, STC
 
 MAX_RETRIES = 8
@@ -94,59 +96,24 @@ async def add_new_items(
         sorted_stock: list[dict[str, Any]] = await sort_stock(stock)
         prepared_stock: dict[str, list[Any]] = await prepare_table_data(sorted_stock)
 
-        msg_animation_1 = MessageAnimation(
-            message_or_call=upd,
-            base_text=f"<b>{supp}</b> запись - создание пустых строк",
-        )
-        await msg_animation_1.start()
-
         #  Добавляем достаточное кол-во строк чтобы вместить новые SKU
-        ws.add_rows(len(prepared_stock["hidden"]) + 1)
+        await retryable_and_animated(
+            upd=upd, base_text=f"<b>{supp}</b> запись - создание пустых строк"
+        )(ws.add_rows)(len(prepared_stock["hidden"]) + 1)
 
-        await msg_animation_1.stop()
-
-        msg_animation_2 = MessageAnimation(
-            message_or_call=upd,
+        #  Узнаем номер последней заполненной строки
+        get_last_row = await retryable_and_animated(
+            upd=upd,
             base_text=f"<b>{supp}</b> чтение - номер последней заполненной строки",
-        )
-        await msg_animation_2.start()
-
-        # try:
-        # number_last_row = len(ws.col_values(1)) + 2
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                number_last_row = len(ws.col_values(1)) + 2
-                break
-
-            except APIError:
-                # If it's the last attempt – rethrow
-                if attempt == MAX_RETRIES - 1:
-                    raise
-
-                # Exponential backoff + jitter
-                delay = BASE_DELAY * (2**attempt)
-                delay += random.uniform(0, 0.5)
-
-                await asyncio.sleep(delay)
-        # except APIError as e:
-        #     print(
-        #         f"Не получилось получить номер последней строки в таблице {supp}\nОшибка: {e}"
-        #     )
-        #     raise e
-
-        await msg_animation_2.stop()
+        )(lambda: len(ws.col_values(1)) + 2)
+        number_last_row: int = await get_last_row()
 
         _l_art: str = BASE_LAYOUT["art"]["l"]
         _l_name: str = STC[supp]["name"]["l"]
 
-        msg_animation_3 = MessageAnimation(
-            message_or_call=upd,
-            base_text=f"<b>{supp}</b> запись - новых позиций",
-        )
-        await msg_animation_3.start()
-
-        ws.batch_update(
+        await retryable_and_animated(
+            upd=upd, base_text=f"<b>{supp}</b> запись - новых позиций"
+        )(ws.batch_update)(
             data=[
                 {
                     "range": f"{_l_art}{number_last_row}",
@@ -156,10 +123,8 @@ async def add_new_items(
                     "range": f"{_l_name}{number_last_row}",
                     "values": prepared_stock["visible"],
                 },
-            ],
+            ]
         )
-
-        await msg_animation_3.stop()
 
         print("Batch update complete")
     return prepared_stock["hidden"]
