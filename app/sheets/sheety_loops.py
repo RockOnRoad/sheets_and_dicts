@@ -21,7 +21,7 @@ def retryable_and_animated(
         async def wrapper(*args, **kwargs):
 
             if base_text:
-                msg = MessageAnimation(upd=upd, base_text=base_text)
+                msg = MessageAnimation(message_or_call=upd, base_text=base_text)
                 await msg.start()
 
             for attempt in range(retries):
