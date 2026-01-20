@@ -106,7 +106,7 @@ async def add_new_items(
             upd=upd,
             base_text=f"<b>{supp}</b> чтение - номер последней заполненной строки",
         )(lambda: len(ws.col_values(1)) + 2)
-        number_last_row: int = await get_last_row()
+        number_last_row: int = get_last_row()
 
         _l_art: str = BASE_LAYOUT["art"]["l"]
         _l_name: str = STC[supp]["name"]["l"]
