@@ -12,6 +12,7 @@ from ..dicts import SeasonType
 from ..sheets.fresh_stock import sort_stock
 from ..sheets import STC, BASE_LAYOUT
 from app.services import MessageAnimation
+from app.sheets.sheety_loops import retryable
 
 
 async def fix_master_formulas(
@@ -94,7 +95,7 @@ async def fix_master_formulas(
         )
         await msg_animation.start()
 
-        ws.update(
+        retryable()(ws.update)(
             values=[
                 headers,
                 formulas_array,
@@ -128,13 +129,12 @@ async def common_tables_add_arts(
 
     new_arts: list[str] = []
     if n_data:
-        ex_arts: set[str] = {
-            item[0]
-            for item in ws.get(
+        ex_arts_row = retryable()(
+            lambda: ws.get(
                 range_name="A3:A", value_render_option=ValueRenderOption.unformatted
             )
-            if item
-        }
+        )
+        ex_arts: set[str] = {item[0] for item in ex_arts_row if item}
         new_lines: set[str] = (obj for obj in n_data if obj["art"] not in ex_arts)
 
         filtered_lines: list[dict[str, Any]] = []
@@ -159,7 +159,7 @@ async def common_tables_add_arts(
             )
             await msg_animation_1.start()
 
-            ws.add_rows(len(new_arts) + 1)
+            retryable()(ws.add_rows)(len(new_arts) + 1)
 
             await msg_animation_1.stop()
 
@@ -171,10 +171,7 @@ async def common_tables_add_arts(
             )
             await msg_animation_2.start()
 
-            number_last_row: int = len(ws.get("A3:A")) + 4
-            print(number_last_row)
-            number_last_row_alt = len(ws.col_values(1)) + 2
-            print(number_last_row_alt)
+            number_last_row = retryable()(lambda: len(ws.col_values(1)) + 2)
 
             await msg_animation_2.stop()
 
@@ -184,7 +181,7 @@ async def common_tables_add_arts(
             )
             await msg_animation_3.start()
 
-            ws.update(new_arts, f"{_l}{number_last_row}")
+            retryable()(ws.update)(new_arts, f"{_l}{number_last_row}")
 
             await msg_animation_3.stop()
 
@@ -198,7 +195,7 @@ async def common_tables_add_arts(
 
             #  19/11/2025
             _l: str = STC[table]["Последнее\nобновление"]["l"]
-            ws.update(
+            retryable()(ws.update)(
                 [[datetime.today().strftime("%d/%m/%Y")]] * new_arts_amo,
                 f"{_l}{number_last_row}",
             )

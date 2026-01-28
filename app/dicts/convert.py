@@ -1,4 +1,6 @@
+import os
 from typing import Any
+from datetime import date
 
 from aiogram.types import Message, CallbackQuery
 
@@ -153,4 +155,14 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
             mes,
             chat_id=ch_id,
             message_id=msg_id,
+        )
+
+    for user in os.getenv("ADMINS"):
+        await upd.bot.send_message(
+            chat_id=int(user),
+            text=(
+                f"{date.today()}"
+                f"✅  Остатки поставщика <b>{supplier}</b> обновлены\n\n"
+                f"Обновил(а): {upd.from_user.username}"
+            ),
         )

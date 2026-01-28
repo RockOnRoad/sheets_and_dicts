@@ -1,13 +1,9 @@
-import asyncio
-import random
 from typing import Any
 from aiogram.types import Message, CallbackQuery
 
 from gspread import Worksheet
-from gspread.exceptions import APIError
-from app.services import MessageAnimation
 
-from app.sheets.sheety_loops import retryable_and_animated
+from app.sheets.sheety_loops import retryable
 
 from . import BASE_LAYOUT, STC
 
@@ -97,23 +93,16 @@ async def add_new_items(
         prepared_stock: dict[str, list[Any]] = await prepare_table_data(sorted_stock)
 
         #  Добавляем достаточное кол-во строк чтобы вместить новые SKU
-        await retryable_and_animated(
-            upd=upd, base_text=f"<b>{supp}</b> запись - создание пустых строк"
-        )(ws.add_rows)(len(prepared_stock["hidden"]) + 1)
+        retryable()(ws.add_rows)(len(prepared_stock["hidden"]) + 1)
 
         #  Узнаем номер последней заполненной строки
-        get_last_row = retryable_and_animated(
-            upd=upd,
-            base_text=f"<b>{supp}</b> чтение - номер последней заполненной строки",
-        )(lambda: len(ws.col_values(1)) + 2)
+        get_last_row = retryable()(lambda: len(ws.col_values(1)) + 2)
         number_last_row: int = get_last_row()
 
         _l_art: str = BASE_LAYOUT["art"]["l"]
         _l_name: str = STC[supp]["name"]["l"]
 
-        await retryable_and_animated(
-            upd=upd, base_text=f"<b>{supp}</b> запись - новых позиций"
-        )(ws.batch_update)(
+        retryable()(ws.batch_update)(
             data=[
                 {
                     "range": f"{_l_art}{number_last_row}",
@@ -125,6 +114,4 @@ async def add_new_items(
                 },
             ]
         )
-
-        print("Batch update complete")
     return prepared_stock["hidden"]
