@@ -144,7 +144,7 @@ async def common_tables_add_arts(
         elif table == list(STC)[1]:
             seas = (SeasonType.SUMMER,)
         for line in new_lines:
-            if line["lt"] == "l" and line["seas"] in seas and notna(line["art"]):
+            if line["lt"] == "l" and line["seas"] in seas and line["art"] != "nan":
                 filtered_lines.append(line)
 
         if filtered_lines:
