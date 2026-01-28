@@ -8,24 +8,44 @@ from gspread.exceptions import APIError
 logger = logging.getLogger(__name__)
 
 
-#  Этот слой нужен в том случае, когда декоратор принимает аргументы
+# #  Этот слой нужен в том случае, когда декоратор принимает аргументы
+# def retryable(
+#     *,
+#     retries=8,
+#     base_delay=2,
+# ):
+#     #  Слой декоратора
+#     def decorator(fn):
+#         #  Слой логики
+#         async def wrapper(*args, **kwargs):
+#             for attempt in range(retries):
+#                 try:
+#                     print(f"Attempt {attempt + 1} for function {fn.__name__}")
+#                     return await fn(*args, **kwargs)
+#                 except APIError as e:
+#                     logger.warning("APIError encountered. Retrying...", exc_info=e)
+#                     if attempt == retries - 1:
+#                         raise
+#                     await asyncio.sleep(base_delay * (2**attempt) + random.random())
+
+#         return wrapper
+
+#     return decorator
+
+
 def retryable(
     *,
-    # upd: Message | CallbackQuery | None = None,
-    # base_text: str | None = None,
     retries=8,
     base_delay=2,
 ):
-    #  Слой декоратора
     def decorator(fn):
-        #  Слой логики
         def wrapper(*args, **kwargs):
             for attempt in range(retries):
                 try:
-                    print(f"Attempt {attempt + 1} for function {fn.__name__}")
+                    print(f"Attempt {attempt + 1} for {fn.__name__}")
                     return fn(*args, **kwargs)
-                except APIError as e:
-                    logger.warning("APIError encountered. Retrying...", exc_info=e)
+                except APIError:
+                    logger.warning("APIError encountered. Retrying...")
                     if attempt == retries - 1:
                         raise
                     time.sleep(base_delay * (2**attempt) + random.random())

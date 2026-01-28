@@ -40,7 +40,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
         mes: str = msg_1 + msg_2
         await upd.message.edit_text((mes))
 
-    ws = await get_ws(supplier)
+    ws = get_ws(supplier)
 
     #  ------------  FILE UTILITY  ------------
 
@@ -107,7 +107,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
 
     for table in list(STC)[:2]:
 
-        ws = await get_ws(table)
+        ws = get_ws(table)
 
         if validated_stock["new_lines"]:
             msg_12: str = f"⇢  Добавляю новые артикулы в таблицу <b>{table}</b>.\n"

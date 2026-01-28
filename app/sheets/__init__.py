@@ -18,13 +18,9 @@ google_creds = Path(__file__).parent / "credantials.json"
 
 _gc = gspread.service_account(filename=google_creds)
 sh = _gc.open_by_key(os.getenv("SHEET_ID"))
-#  Dictionary of worksheets for quick access {'Sheet1': <Worksheet 'Sheet1' ...>},
-# worksheets = {ws.title: ws for ws in _sh.worksheets()}
-
-# sheets_timeout = 20  # seconds
 
 
-async def get_ws(name: str) -> Worksheet:
+def get_ws(name: str) -> Worksheet:
     """Fetch worksheet by name, quick lookup (no extra API call)."""
     return sh.worksheet(name)
 

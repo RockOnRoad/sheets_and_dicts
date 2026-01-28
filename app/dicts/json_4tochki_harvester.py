@@ -9,6 +9,7 @@ from pydantic import ValidationError, NonNegativeInt, model_validator
 
 from . import TireSKU, TireStock, VehicleType, SeasonType
 from ..sheets import STC
+from app.sheets.sheety_loops import retryable
 
 
 class Stock_4tochki(TireStock):
@@ -133,11 +134,18 @@ async def harv_4tochki(data: DataFrame, ws: Worksheet) -> None:
     instock_df = df[df["rest_oh_solonkl"].notna() | df["price_kryarsk2"].notna()]
 
     _l: str = STC["4tochki"]["art"]["l"]
-    col = f"{_l}3:{_l}"
-    ex_arts: list[str] = {
-        item[0] if item else ""
-        for item in ws.get(col, value_render_option=ValueRenderOption.unformatted)
-    }
+
+    @retryable()
+    def get_ex_local_arts(ws, col: str) -> set[str]:
+        return {
+            item[0] if item else ""
+            for item in ws.get(
+                f"{col}3:{col}",
+                value_render_option=ValueRenderOption.unformatted,
+            )
+        }
+
+    ex_arts: set[str] = get_ex_local_arts(ws, _l)
 
     new_df: DataFrame = instock_df[~instock_df["cae"].isin(ex_arts)]
 

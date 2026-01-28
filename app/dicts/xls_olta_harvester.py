@@ -11,6 +11,7 @@ from pydantic import ValidationError, NonNegativeInt, model_validator
 from . import TireSKU, TireStock, VehicleType, SeasonType
 from ..sheets import STC
 from app.sheets.parse_supplier_naming import parse_stud
+from app.sheets.sheety_loops import retryable
 
 
 class StockOlta(TireStock):
@@ -82,12 +83,17 @@ async def harv_olta(xlsx: ExcelFile, ws: Worksheet):
 
     _l: str = STC["olta"]["local_art"]["l"]
 
-    ex_local_arts: list[str] = {
-        item[0] if item else ""
-        for item in ws.get(
-            f"{_l}3:{_l}", value_render_option=ValueRenderOption.unformatted
-        )
-    }
+    @retryable()
+    def get_ex_local_arts(ws, col: str) -> set[str]:
+        return {
+            item[0] if item else ""
+            for item in ws.get(
+                f"{col}3:{col}",
+                value_render_option=ValueRenderOption.unformatted,
+            )
+        }
+
+    ex_local_arts: set[str] = get_ex_local_arts(ws, _l)
 
     validated_data = {
         "i_data": 0,  # int

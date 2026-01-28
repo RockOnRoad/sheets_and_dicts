@@ -171,7 +171,9 @@ async def add_fresh_amounts(
     _l: str = STC[supp][key]["l"]
     col: str = f"{_l}3:{_l}"
 
-    primary_keys = retryable()(lambda: ws.get(col))
+    get_with_retry = retryable()(ws.get)
+    primary_keys = get_with_retry(col)
+
     pks: list[str] = [item[0] if item else "" for item in primary_keys]
     # olta, simoshkevich - local_arts; others - arts
 

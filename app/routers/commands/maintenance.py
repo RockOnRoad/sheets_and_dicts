@@ -17,7 +17,8 @@ from app.dicts.matches_edit import (
 from app.kbds import inline_buttons
 from app.routers.router_objects import AdminCheck
 from app.services.message_animation import MessageAnimation
-from app.sheets import sh
+from app.sheets import sh, get_ws
+from app.sheets.sheety_loops import retryable
 
 
 rtr = Router(name=__name__)
@@ -335,3 +336,10 @@ async def test_animation_next_hand(call: CallbackQuery):
     await anim.stop()
 
     await mes.edit_text("Анимация завершена.")
+
+
+@rtr.message(AdminCheck(), Command("ws_get"))
+async def test_ws_get_columns_hand(message: Message):
+    ws = await get_ws("olta")
+    primary_keys = retryable()(lambda: ws.get("J3:J"))()
+    print(type(primary_keys))

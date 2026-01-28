@@ -89,6 +89,7 @@ async def add_new_items(
     """
     # fresh_stock: list[dict[str, Any]] = await fresh(stock, table=supp, supp=supp)
     if stock:
+        print()
         sorted_stock: list[dict[str, Any]] = await sort_stock(stock)
         prepared_stock: dict[str, list[Any]] = await prepare_table_data(sorted_stock)
 
@@ -96,13 +97,17 @@ async def add_new_items(
         retryable()(ws.add_rows)(len(prepared_stock["hidden"]) + 1)
 
         #  Узнаем номер последней заполненной строки
-        get_last_row = retryable()(lambda: len(ws.col_values(1)) + 2)
-        number_last_row: int = get_last_row()
+        def _get_col():
+            return ws.col_values(1)
+
+        get_last_row = retryable()(_get_col)
+        number_last_row: int = len(get_last_row()) + 2
 
         _l_art: str = BASE_LAYOUT["art"]["l"]
         _l_name: str = STC[supp]["name"]["l"]
 
-        retryable()(ws.batch_update)(
+        batch_update_retry = retryable()(ws.batch_update)
+        batch_update_retry(
             data=[
                 {
                     "range": f"{_l_art}{number_last_row}",

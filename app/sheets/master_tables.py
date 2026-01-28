@@ -95,7 +95,8 @@ async def fix_master_formulas(
         )
         await msg_animation.start()
 
-        retryable()(ws.update)(
+        update_retry = retryable()(ws.update)
+        update_retry(
             values=[
                 headers,
                 formulas_array,
@@ -129,13 +130,13 @@ async def common_tables_add_arts(
 
     new_arts: list[str] = []
     if n_data:
-        ex_arts_row = retryable()(
-            lambda: ws.get(
-                range_name="A3:A", value_render_option=ValueRenderOption.unformatted
-            )
+        get_with_retry = retryable()(ws.get)
+        ex_arts_row = get_with_retry(
+            range_name="A3:A",
+            value_render_option=ValueRenderOption.unformatted,
         )
         ex_arts: set[str] = {item[0] for item in ex_arts_row if item}
-        new_lines: set[str] = (obj for obj in n_data if obj["art"] not in ex_arts)
+        new_lines = (obj for obj in n_data if obj["art"] not in ex_arts)
 
         filtered_lines: list[dict[str, Any]] = []
         if table == list(STC)[0]:
@@ -159,7 +160,8 @@ async def common_tables_add_arts(
             )
             await msg_animation_1.start()
 
-            retryable()(ws.add_rows)(len(new_arts) + 1)
+            add_rows_retry = retryable()(ws.add_rows)
+            add_rows_retry(len(new_arts) + 1)
 
             await msg_animation_1.stop()
 
@@ -171,7 +173,12 @@ async def common_tables_add_arts(
             )
             await msg_animation_2.start()
 
-            number_last_row = retryable()(lambda: len(ws.col_values(1)) + 2)
+            # number_last_row = retryable()(lambda: len(ws.col_values(1)) + 2)()
+            @retryable()
+            def get_last_row(ws) -> int:
+                return len(ws.col_values(1)) + 2
+
+            number_last_row: int = get_last_row(ws)
 
             await msg_animation_2.stop()
 
@@ -181,7 +188,8 @@ async def common_tables_add_arts(
             )
             await msg_animation_3.start()
 
-            retryable()(ws.update)(new_arts, f"{_l}{number_last_row}")
+            update_retry = retryable()(ws.update)
+            update_retry(new_arts, f"{_l}{number_last_row}")
 
             await msg_animation_3.stop()
 
@@ -195,8 +203,9 @@ async def common_tables_add_arts(
 
             #  19/11/2025
             _l: str = STC[table]["Последнее\nобновление"]["l"]
-            retryable()(ws.update)(
-                [[datetime.today().strftime("%d/%m/%Y")]] * new_arts_amo,
+            update_retry = retryable()(ws.update)
+            update_retry(
+                [[datetime.today().strftime("%d/%m/%Y")] for _ in range(new_arts_amo)],
                 f"{_l}{number_last_row}",
             )
 
