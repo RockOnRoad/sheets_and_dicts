@@ -171,11 +171,18 @@ async def add_fresh_amounts(
     _l: str = STC[supp][key]["l"]
     col: str = f"{_l}3:{_l}"
 
+    msg_animation_2 = MessageAnimation(
+        message_or_call=upd,
+        base_text=f"<b>{supp}</b> чтение - получение артикулов поставщика из таблицы",
+    )
+    await msg_animation_2.start()
+
     get_with_retry = retryable()(ws.get)
     primary_keys = get_with_retry(col)
-
     pks: list[str] = [item[0] if item else "" for item in primary_keys]
     # olta, simoshkevich - local_arts; others - arts
+
+    await msg_animation_2.stop()
 
     grid_of_amos: list[str] = await prepare_amounts(
         keys=pks, key=key, data=stock, supp=supp

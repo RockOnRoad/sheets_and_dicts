@@ -157,7 +157,9 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
             message_id=msg_id,
         )
 
-    for user in os.getenv("ADMINS"):
+    users = os.getenv("ADMINS").split(",")
+    for user in users:
+        user = user.strip().replace(")", "").replace("(", "")
         await upd.bot.send_message(
             chat_id=int(user),
             text=(

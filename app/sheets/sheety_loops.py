@@ -41,6 +41,7 @@ def retryable(
     def decorator(fn):
         def wrapper(*args, **kwargs):
             for attempt in range(retries):
+                time.sleep(0.1)  # slight delay to avoid immediate retry
                 try:
                     print(f"Attempt {attempt + 1} for {fn.__name__}")
                     return fn(*args, **kwargs)

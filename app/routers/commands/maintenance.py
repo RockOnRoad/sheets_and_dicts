@@ -343,3 +343,14 @@ async def test_ws_get_columns_hand(message: Message):
     ws = await get_ws("olta")
     primary_keys = retryable()(lambda: ws.get("J3:J"))()
     print(type(primary_keys))
+
+
+@rtr.message(AdminCheck(), Command("notify_stock_update"))
+async def notify_stock_update_hand(message: Message):
+    import os
+
+    users = os.getenv("ADMINS").split(",")
+
+    for user in users:
+        user = user.strip().replace(")", "").replace("(", "")
+        user = int(user)
