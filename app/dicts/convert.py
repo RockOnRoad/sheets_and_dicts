@@ -24,7 +24,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
     # _sh.worksheets()  # to keep the connection alive
 
     msg_1: str = f"✔︎  Файл поставщика (<code>{supplier}</code>) получен.\n"
-    msg_2: str = "⇢  Скачивание файла"
+    msg_2: str = "⇢  Скачивание файла c телеграма...\n"
 
     if isinstance(upd, Message):
         msg_id: int = upd.message_id + 1
@@ -45,7 +45,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
     #  ------------  FILE UTILITY  ------------
 
     validated_stock: dict[str, Any] = await file_handler(
-        msg=msg_w_file, supplier=supplier, ws=ws
+        upd=upd, msg_w_file=msg_w_file, supplier=supplier, ws=ws
     )
 
     msg_3 = f"✔︎  (<code>{msg_w_file.document.file_name}</code>) Файл провалидирован.\n"
@@ -163,7 +163,7 @@ async def squeeze(upd: Message | CallbackQuery, msg_w_file: Message, supplier: s
         await upd.bot.send_message(
             chat_id=int(user),
             text=(
-                f"{date.today()}"
+                f"{date.today()}\n"
                 f"✅  Остатки поставщика <b>{supplier}</b> обновлены\n\n"
                 f"Обновил(а): {upd.from_user.username}"
             ),

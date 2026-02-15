@@ -1,10 +1,11 @@
 import json
+import logging
 import pandas as pd
 from pandas import ExcelFile, json_normalize
 from io import BytesIO
 from typing import Any
 
-from aiogram.types import Message, Document
+from aiogram.types import Message, CallbackQuery, Document
 from gspread import Worksheet
 
 from app.sheets import STC
@@ -17,15 +18,26 @@ from app.services import MessageAnimation
 
 # from app.dicts.xlsx_Scotchenko_harvester import harv_scotchenko
 
+logger = logging.getLogger(__name__)
 
-async def file_handler(msg: Message, supplier: str, ws: Worksheet):
-    doc: Document = msg.document
+
+async def file_handler(
+    upd: Message | CallbackQuery, msg_w_file: Message, supplier: str, ws: Worksheet
+):
+    doc: Document = msg_w_file.document
 
     validated_data: dict = {}
 
     with BytesIO() as file:
-        await msg.bot.download(doc.file_id, destination=file)
-        file.seek(0)
+        try:
+            await msg_w_file.bot.download(doc.file_id, destination=file)
+            file.seek(0)
+        except TimeoutError:
+            if isinstance(upd, Message):
+                await upd.answer("Ошибка загрузки файла. Попробуйте ещё раз.")
+            else:
+                await upd.message.answer("Ошибка загрузки файла. Попробуйте ещё раз.")
+            return
 
         name = doc.file_name.lower()
         mime = doc.mime_type
@@ -43,13 +55,13 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
                     # df = json_normalize(data["tires"])
                     validated_data = await harv_4tochki(data=df, ws=ws)
                 else:
-                    await msg.reply(f"<b>.json</b> Поставщик {supplier} не найден")
+                    logger.warning(f"JSON Поставщик {supplier} не найден")
                     return
 
             elif name.endswith((".xls", ".xlsx")) or "excel" in mime:
 
                 msg_animation = MessageAnimation(
-                    message_or_call=msg,
+                    message_or_call=msg_w_file,
                     base_text=f"<b>{supplier}</b> чтение - существующих артикулов",
                 )
                 await msg_animation.start()
@@ -68,17 +80,19 @@ async def file_handler(msg: Message, supplier: str, ws: Worksheet):
                 # elif supplier == list(STC)[7]:  # scotchenko
                 #     validated_data = await harv_scotchenko(xlsx=data, ws=ws)
                 else:
-                    await msg.reply(f"<b>excel</b> Поставщик {supplier} не найден")
+                    await msg_w_file.reply(
+                        f"<b>excel</b> Поставщик {supplier} не найден"
+                    )
                     raise ValueError(f"<b>excel</b> Поставщик {supplier} не найден")
 
                 await msg_animation.stop()
 
             else:
-                await msg.reply("Файл не поддерживается (нужен Excel или JSON).")
+                await msg_w_file.reply("Файл не поддерживается (нужен Excel или JSON).")
                 return
 
         except ValueError as e:
-            await msg.reply(str(e))
+            await msg_w_file.reply(str(e))
             return
 
     return validated_data

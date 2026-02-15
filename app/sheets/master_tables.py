@@ -1,5 +1,3 @@
-import asyncio
-
 from datetime import datetime
 from typing import Any
 
@@ -140,9 +138,9 @@ async def common_tables_add_arts(
 
         filtered_lines: list[dict[str, Any]] = []
         if table == list(STC)[0]:
-            seas = (SeasonType.WINTER, SeasonType.ALLSEASON)
+            seas = SeasonType.WINTER
         elif table == list(STC)[1]:
-            seas = (SeasonType.SUMMER,)
+            seas = (SeasonType.SUMMER, SeasonType.ALLSEASON)
         for line in new_lines:
             if line["lt"] == "l" and line["seas"] in seas and line["art"] != "nan":
                 filtered_lines.append(line)
